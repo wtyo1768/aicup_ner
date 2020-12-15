@@ -275,15 +275,6 @@ class Lattice_Transformer_SeqLabel(nn.Module):
         self.rel_pos_init = rel_pos_init
         self.embed_dropout_pos = embed_dropout_pos
 
-
-        # if self.relative_position:
-        #     print('现在还不支持相对编码！')
-        #     exit(1208)
-
-        # if self.add_position:
-        #     print('暂时只支持位置编码的concat模式')
-        #     exit(1208)
-
         if self.use_rel_pos and max_seq_len < 0:
             print_info('max_seq_len should be set if relative position encode')
             exit(1208)
@@ -326,14 +317,6 @@ class Lattice_Transformer_SeqLabel(nn.Module):
             self.pe_es = None
             self.pe_ee = None
 
-
-
-
-
-
-        # if self.add_position:
-        #     print('现在还不支持位置编码通过concat的方式加入')
-        #     exit(1208)
 
         self.layer_preprocess_sequence = layer_preprocess_sequence
         self.layer_postprocess_sequence = layer_postprocess_sequence
@@ -405,7 +388,7 @@ class Lattice_Transformer_SeqLabel(nn.Module):
 
 
     def forward(self, lattice, bigrams, seq_len, lex_num, pos_s, pos_e,
-                target, chars_target=None):
+                target=None, chars_target=None):
         if self.mode['debug']:
             print('lattice:{}'.format(lattice))
             print('bigrams:{}'.format(bigrams))
@@ -440,45 +423,28 @@ class Lattice_Transformer_SeqLabel(nn.Module):
                                     torch.zeros(size=[batch_size,bert_pad_length,bert_embed.size(-1)],
                                                 device = bert_embed.device,
                                                 requires_grad=False)],dim=-2)
-            # print('bert_embed:{}'.format(bert_embed[:1, :3, -5:]))
             raw_embed_char = torch.cat([raw_embed_char, bert_embed],dim=-1)
-
-        # print('raw_embed_char:{}'.format(raw_embed_char[:1,:3,-5:]))
 
         if self.embed_dropout_pos == '0':
             raw_embed_char = self.embed_dropout(raw_embed_char)
             raw_embed = self.gaz_dropout(raw_embed)
 
-        # print('raw_embed_char_dp:{}'.format(raw_embed_char[:1,:3,-5:]))
-
-
 
         embed_char = self.char_proj(raw_embed_char)
-        # print('char_proj:',list(self.char_proj.parameters())[0].data[:2][:2])
-        # print('embed_char_:{}'.format(embed_char[:1,:3,:4]))
-
-
 
         if self.mode['debug']:
             print('embed_char:{}'.format(embed_char[:2]))
         char_mask = seq_len_to_mask(seq_len,max_len=max_seq_len_and_lex_num).bool()
-        # if self.embed_dropout_pos == '1':
-        #     embed_char = self.embed_dropout(embed_char)
         embed_char.masked_fill_(~(char_mask.unsqueeze(-1)), 0)
 
         embed_lex = self.lex_proj(raw_embed)
         if self.mode['debug']:
             print('embed_lex:{}'.format(embed_lex[:2]))
-        # if self.embed_dropout_pos == '1':
-        #     embed_lex = self.embed_dropout(embed_lex)
 
         lex_mask = (seq_len_to_mask(seq_len+lex_num).bool() ^ char_mask.bool())
         embed_lex.masked_fill_(~(lex_mask).unsqueeze(-1), 0)
 
         assert char_mask.size(1) == lex_mask.size(1)
-        # print('embed_char:{}'.format(embed_char[:1,:3,:4]))
-        # print('embed_lex:{}'.format(embed_lex[:1,:3,:4]))
-
 
 
 
@@ -494,11 +460,7 @@ class Lattice_Transformer_SeqLabel(nn.Module):
 
         if self.embed_dropout_pos == '2':
             embedding = self.embed_dropout(embedding)
-        # embedding = self.embed_dropout(embedding)
-        # print('*1*')
-        # print(embedding.size())
-        # print('merged_embedding:{}'.format(embedding[:1,:3,:4]))
-        # exit()
+
         encoded = self.encoder(embedding,seq_len,lex_num=lex_num,pos_s=pos_s,pos_e=pos_e)
 
         if hasattr(self,'output_dropout'):
@@ -516,13 +478,11 @@ class Lattice_Transformer_SeqLabel(nn.Module):
         if self.training:
             loss = self.crf(pred, target, mask).mean(dim=0)
             if self.self_supervised:
-                # print('self supervised loss added!')
                 chars_pred = self.output_self_supervised(encoded)
                 chars_pred = chars_pred.view(size=[batch_size*max_seq_len,-1])
                 chars_target = chars_target.view(size=[batch_size*max_seq_len])
                 self_supervised_loss = self.loss_func(chars_pred,chars_target)
-                # print('self_supervised_loss:{}'.format(self_supervised_loss))
-                # print('supervised_loss:{}'.format(loss))
+
                 loss += self_supervised_loss
             return {'loss': loss}
         else:
@@ -533,15 +493,6 @@ class Lattice_Transformer_SeqLabel(nn.Module):
                 result['chars_pred'] = chars_pred
 
             return result
-
-
-    # def train(self,mode=True):
-    #     print('model mode get train ! mode:{}'.format(mode))
-    #     super().train(mode)
-    #
-    # def eval(self):
-    #     print('model mode get eval !')
-    #     super().eval()
 
 
 class BERT_SeqLabel(nn.Module):
@@ -584,9 +535,6 @@ class BERT_SeqLabel(nn.Module):
             result = {'pred': pred}
 
             return result
-
-
-
 
 
 
@@ -656,17 +604,6 @@ class Transformer_SeqLabel(nn.Module):
         else:
             self.pe = None
 
-
-        # if self.relative_position:
-        #     print('现在还不支持相对编码！')
-        #     exit(1208)
-
-
-
-
-        # if not self.add_position:
-        #     print('现在还不支持位置编码通过concat的方式加入')
-        #     exit(1208)
 
         self.layer_preprocess_sequence = layer_preprocess_sequence
         self.layer_postprocess_sequence = layer_postprocess_sequence
@@ -775,12 +712,3 @@ class Transformer_SeqLabel(nn.Module):
                 result['chars_pred'] = chars_pred
 
             return result
-
-
-    # def train(self,mode=True):
-    #     print('model mode get train ! mode:{}'.format(mode))
-    #     super().train(mode)
-    #
-    # def eval(self):
-    #     print('model mode get eval !')
-    #     super().eval()

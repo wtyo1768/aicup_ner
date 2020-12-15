@@ -1,0 +1,12 @@
+*.txt
+
+data
+cache
+model
+*/log/*
+log
+*.ipynb
+nohup.out
+__pycache__
+.ipynb_checkpoints
+.vscode

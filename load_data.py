@@ -11,40 +11,6 @@ from fastNLP_module import StaticEmbedding
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 @cache_results(_cache_fp='cache/ontonotes4ner',_refresh=False)
 def load_ontonotes4ner(path,char_embedding_path=None,bigram_embedding_path=None,index_token=True,train_clip=False,
                        char_min_freq=1,bigram_min_freq=1,only_train_min_freq=0):
@@ -469,15 +435,10 @@ def load_weibo_ner(path,unigram_embedding_path=None,bigram_embedding_path=None,i
     from utils import get_bigrams
 
     loader = ConllLoader(['chars','target'])
-    # bundle = loader.load(path)
-    #
-    # datasets = bundle.datasets
 
-    # print(datasets['train'][:5])
-
-    train_path = os.path.join(path,'weiboNER_2nd_conll.train_deseg')
-    dev_path = os.path.join(path, 'weiboNER_2nd_conll.dev_deseg')
-    test_path = os.path.join(path, 'weiboNER_2nd_conll.test_deseg')
+    train_path = os.path.join(path,'weiboNER_2nd_conll.train')
+    dev_path = os.path.join(path, 'weiboNER_2nd_conll.dev')
+    test_path = os.path.join(path, 'weiboNER_2nd_conll.test')
 
     paths = {}
     paths['train'] = train_path
@@ -513,14 +474,18 @@ def load_weibo_ner(path,unigram_embedding_path=None,bigram_embedding_path=None,i
 
     for k,v in datasets.items():
         # v.set_pad_val('target',-100)
-        v.add_seq_len('chars',new_field_name='seq_len')
+        v.add_seq_len('chars', new_field_name='seq_len')
 
 
     vocabs['char'] = char_vocab
     vocabs['label'] = label_vocab
 
+    bigram_vocab.from_dataset(
+        datasets['train'],
+        field_name='bigrams',
+        no_create_entry_dataset=[datasets['dev'], datasets['test']]
+    )
 
-    bigram_vocab.from_dataset(datasets['train'],field_name='bigrams',no_create_entry_dataset=[datasets['dev'],datasets['test']])
     if index_token:
         char_vocab.index_dataset(*list(datasets.values()), field_name='chars', new_field_name='chars')
         bigram_vocab.index_dataset(*list(datasets.values()),field_name='bigrams',new_field_name='bigrams')
