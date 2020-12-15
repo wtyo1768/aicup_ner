@@ -40,7 +40,7 @@ def load_aicup_ner(
     }
     if not cv:
         ds['test'] = DataSet({'chars':test_texts, 'target':test_tags})
-    ds['aicup_dev'] = get_aicup_devds()
+    ds['aicup_dev'], offset_map = get_aicup_devds()
 
     # loader = ConllLoader(['chars', 'target'])
     # for ds_name in ['train', 'dev', 'test']:
@@ -105,15 +105,15 @@ def load_aicup_ner(
     embeddings['char'] = unigram_embedding
     embeddings['bigram'] = bigram_embedding
 
-    return ds, vocabs, embeddings
+    return ds, vocabs, embeddings, offset_map
 
 
-# @cache_results(_cache_fp='cache/aicupDev_uni+bi', _refresh=True)
 def get_aicup_devds():
     raw_data = load_dev()
     
     offset_mapping = []
     for idx in range(len(raw_data)):
+        print(idx)
         raw_data[idx], offset_map = romove_redundant_str(raw_data[idx], dev_mode=True)
         offset_mapping.append(offset_map)
 
@@ -127,13 +127,15 @@ def get_aicup_devds():
 
     # split_docs = cut_words(split_docs)
     dev_ds = DataSet({'chars':split_docs})    
-    return dev_ds
+    return dev_ds, offset_mapping
 
 
 if __name__ == "__main__":
 
     ds = get_aicup_devds()
+    ds.add_seq_len('chars', new_field_name='seq_len')
     print(ds)
+
 
     # from paths import *   
 

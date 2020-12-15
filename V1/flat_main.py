@@ -28,7 +28,6 @@ import fitlog
 from fastNLP import logger
 from utils import get_peking_time
 from V1.add_lattice import equip_chinese_ner_with_lexicon
-from load_data import load_toy_ner
 
 import traceback
 import warnings
@@ -216,7 +215,7 @@ if args.dataset == 'weibo':
                                             )
 elif args.dataset == 'aicup':
     from aicup_dataset import load_aicup_ner
-    datasets,vocabs,embeddings = load_aicup_ner(aicup_ner_path,yangjie_rich_pretrain_unigram_path,yangjie_rich_pretrain_bigram_path,
+    datasets,vocabs,embeddings,offset_map = load_aicup_ner(aicup_ner_path,yangjie_rich_pretrain_unigram_path,yangjie_rich_pretrain_bigram_path,
                                                 _refresh=refresh_data,index_token=False,
                                                 _cache_fp=raw_dataset_cache_name,
                                                 char_min_freq=args.char_min_freq,
@@ -599,18 +598,38 @@ if args.status == 'train':
         check_code_level=-1,
         update_every=args.update_every
     )
-    print(embeddings['word'](66))
+    # print(embeddings['word'](66))
     trainer.train()
-    print(embeddings['word'](66))
+    # print(embeddings['word'](66))
 else:
     from fastNLP.core.predictor import Predictor
     from fastNLP.core.tester import Tester
-    mpath = '/home/dy/Flat-Lattice-Transformer/model/2020-12-14-12-46-56/epoch-14_step-1064_f-0.802817.pt'
+
+    mpath = '/home/dy/Flat-Lattice-Transformer/model/no/2020-12-15-21-52-45/epoch-16_step-2352_f-0.740828.pt'
     print('predicting...')
 
+    # model = Predictor(model)
     model = Predictor(torch.load(mpath))
     pred = model.predict(
         datasets['aicup_dev'],
         seq_len_field_name='seq_len',
-    )
-    print(pred)
+    )['pred']
+
+    sys.path.append('/home/dy/aicup/src')
+    from dataset import romove_redundant_str, split_to_sentence, cut_words, get_fastnlp_ds
+    from predict import load_dev, split_to_pred_per_article, write_result, count_article_length
+    
+    dev_data = load_dev()
+    origin_data = dev_data.copy()
+
+    offset_map = []
+    for idx in range(len(dev_data)):
+        dev_data[idx], map_arr = romove_redundant_str(dev_data[idx], dev_mode=True)
+        offset_map.append(map_arr)
+
+    pred = [vocabs['label'].to_word(ele) for arr in pred for ele in arr]
+    pred_per_article = split_to_pred_per_article([pred], count_article_length(dev_data)) 
+    print('writing file...')
+    print(pred_per_article)
+    write_result(dev_data, pred_per_article, offset_map, origin_data)
+
