@@ -605,10 +605,9 @@ else:
     from fastNLP.core.predictor import Predictor
     from fastNLP.core.tester import Tester
 
-    mpath = '/home/dy/Flat-Lattice-Transformer/model/no/2020-12-15-21-52-45/epoch-16_step-2352_f-0.740828.pt'
+    mpath = '/home/dy/Flat-Lattice-Transformer/model/many/2020-12-16-04-56-45/epoch-55_step-8085_f-0.796231.pt'
     print('predicting...')
 
-    # model = Predictor(model)
     model = Predictor(torch.load(mpath))
     pred = model.predict(
         datasets['aicup_dev'],
@@ -620,7 +619,7 @@ else:
     from predict import load_dev, split_to_pred_per_article, write_result, count_article_length
     
     dev_data = load_dev()
-    origin_data = dev_data.copy()
+    origin_data = load_dev(simplify=False)
 
     offset_map = []
     for idx in range(len(dev_data)):
@@ -630,6 +629,5 @@ else:
     pred = [vocabs['label'].to_word(ele) for arr in pred for ele in arr]
     pred_per_article = split_to_pred_per_article([pred], count_article_length(dev_data)) 
     print('writing file...')
-    print(pred_per_article)
     write_result(dev_data, pred_per_article, offset_map, origin_data)
 

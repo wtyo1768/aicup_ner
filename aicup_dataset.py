@@ -9,6 +9,7 @@ import sys
 sys.path.append('/home/dy/aicup/src')
 from dataset import romove_redundant_str, split_to_sentence, cut_words, get_fastnlp_ds
 from predict import load_dev
+from paths import *
 
 
 @cache_results(_cache_fp='cache/aicupNER_uni+bi', _refresh=True)
@@ -22,7 +23,7 @@ def load_aicup_ner(
     only_train_min_freq=0,
     char_word_dropout=0.01,
     cv=False,
-    model_type='few',
+    model_type='many',
     ):
 
     vocabs = {}
@@ -30,7 +31,7 @@ def load_aicup_ner(
     if cv:
         train_texts, train_tags, val_texts, val_tags = get_fastnlp_ds(mode=model_type, cv=cv)
     else:     
-        train_texts, train_tags, val_texts, val_tags, test_texts, test_tags = get_fastnlp_ds(mode='no', cv=cv)
+        train_texts, train_tags, val_texts, val_tags, test_texts, test_tags = get_fastnlp_ds(mode=model_type, cv=cv)
     
     train_ds = DataSet({'chars':train_texts, 'target':train_tags})
     dev_ds = DataSet({'chars':val_texts, 'target':val_tags})
@@ -113,7 +114,7 @@ def get_aicup_devds():
     
     offset_mapping = []
     for idx in range(len(raw_data)):
-        print(idx)
+        # print(idx)
         raw_data[idx], offset_map = romove_redundant_str(raw_data[idx], dev_mode=True)
         offset_mapping.append(offset_map)
 
@@ -132,11 +133,15 @@ def get_aicup_devds():
 
 if __name__ == "__main__":
 
-    ds = get_aicup_devds()
-    ds.add_seq_len('chars', new_field_name='seq_len')
-    print(ds)
+    # ds = get_aicup_devds()
+    # ds.add_seq_len('chars', new_field_name='seq_len')
+    # print(ds)
 
-
+    loader = ConllLoader(['chars', 'target'], dropna=False)
+    for ds_name in ['train', 'dev', 'test']:
+        bundle = loader.load(os.path.join(root_path,'data', ds_name))
+        ds[ds_name] = bundle.datasets['train']
+    print(ds[ds_name])
     # from paths import *   
 
     # ds, vocabs, embeddings = load_aicup_ner(

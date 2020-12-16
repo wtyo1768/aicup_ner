@@ -584,8 +584,8 @@ callbacks = [
         # CheckWeightCallback(model)
 ]
 
-print('parameter weight:')
-print(model.state_dict()['encoder.layer_0.attn.w_q.weight'])
+# print('parameter weight:')
+# print(model.state_dict()['encoder.layer_0.attn.w_q.weight'])
 if args.warmup > 0 and args.model == 'transformer':
     callbacks.append(WarmupCallback(warmup=args.warmup))
 
