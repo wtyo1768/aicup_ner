@@ -487,7 +487,7 @@ class Lattice_Transformer_SeqLabel(nn.Module):
             return {'loss': loss}
         else:
             pred, path = self.crf.viterbi_decode(pred, mask)
-            result = {'pred': pred}
+            result = {'pred': pred, 'path':path}
             if self.self_supervised:
                 chars_pred = self.output_self_supervised(encoded)
                 result['chars_pred'] = chars_pred

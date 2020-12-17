@@ -13,6 +13,7 @@ import argparse
 from paths import *
 from fastNLP.core import Trainer
 from fastNLP.core import Callback
+from fastNLP.core.metrics import MetricBase
 from V1.models import Lattice_Transformer_SeqLabel, Transformer_SeqLabel
 import torch
 import collections
@@ -23,6 +24,7 @@ from fastNLP.core.metrics import SpanFPreRecMetric,AccuracyMetric
 from fastNLP.core.callback import WarmupCallback,GradientClipCallback,EarlyStopCallback,SaveModelCallback
 from fastNLP import FitlogCallback
 from fastNLP import LRScheduler
+from fastNLP.core.predictor import Predictor
 from torch.optim.lr_scheduler import LambdaLR
 import fitlog
 from fastNLP import logger
@@ -36,12 +38,14 @@ from utils import print_info
 # from fastNLP.embeddings import BertEmbedding
 from fastNLP_module import BertEmbedding
 from V1.models import BERT_SeqLabel
+from seqeval.metrics import classification_report
 
 
 parser = argparse.ArgumentParser()
 # performance inrelevant
 parser.add_argument('--cv',type=bool,default=False)
 parser.add_argument('--model_type',type=str,default='few')
+parser.add_argument('--fold',type=int,default=0)
 
 parser.add_argument('--update_every',type=int,default=1)
 parser.add_argument('--status',choices=['train','test'],default='train')
@@ -80,7 +84,7 @@ parser.add_argument('--batch', default=32, type=int)
 parser.add_argument('--optim', default='sgd', help='sgd|adam')
 parser.add_argument('--lr', default=6e-4, type=float)
 parser.add_argument('--bert_lr_rate',default=0.05,type=float)
-parser.add_argument('--embed_lr_rate',default=1,type=float)
+parser.add_argument('--embed_lr_rate',default=1.5,type=float)
 parser.add_argument('--momentum', default=0.9)
 parser.add_argument('--init',default='uniform',help='norm|uniform')
 parser.add_argument('--self_supervised',default=False)
@@ -194,7 +198,8 @@ for k,v in args.__dict__.items():
     print_info('{} : {}'.format(k,v))
 
 
-raw_dataset_cache_name = os.path.join('cache',args.dataset+'model_type:{}'.format(args.model_type)
+raw_dataset_cache_name = os.path.join('cache',
+                                      'k{}'.format(args.fold)
                                       +'_cv:{}'.format(args.cv)
                                       +'_trainClip:{}'.format(args.train_clip) 
                                       +'bgminfreq_{}'.format(args.bigram_min_freq)
@@ -223,6 +228,7 @@ elif args.dataset == 'aicup':
                                                 only_train_min_freq=args.only_train_min_freq,
                                                 cv=args.cv,
                                                 model_type=args.model_type,
+                                                fold=args.fold,
                                             )
 
 
@@ -242,14 +248,17 @@ w_list = load_yangjie_rich_pretrain_word_list(yangjie_rich_pretrain_word_path,
                                               _refresh=refresh_data,
                                               _cache_fp='cache/{}'.format(args.lexicon_name))
 
-cache_name = os.path.join('cache',(args.dataset+'_lattice'+'_only_train:{}'+
-                          '_trainClip:{}'+'_norm_num:{}'
-                                   +'char_min_freq{}'+'bigram_min_freq{}'+'word_min_freq{}'+'only_train_min_freq{}'
-                                   +'number_norm{}'+'lexicon_{}'+'load_dataset_seed_{}')
-                          .format(args.only_lexicon_in_train,
+cache_name = os.path.join('cache', 'k{}'.format(args.fold)
+                                    +'_cv:{}'.format(args.cv)
+                                    +'_lattice'+'_only_train:{}'
+                                    +'_trainClip:{}'+'_norm_num:{}'
+                                    +'char_min_freq{}'+'bigram_min_freq{}'
+                                    +'word_min_freq{}'+'only_train_min_freq{}'
+                                    +'number_norm{}'+'lexicon_{}'
+                                    +'load_dataset_seed_{}').format(args.only_lexicon_in_train,
                           args.train_clip,args.number_normalized,args.char_min_freq,
                                   args.bigram_min_freq,args.word_min_freq,args.only_train_min_freq,
-                                  args.number_normalized,args.lexicon_name,load_dataset_seed))
+                                  args.number_normalized,args.lexicon_name,load_dataset_seed)
 datasets,vocabs,embeddings = equip_chinese_ner_with_lexicon(datasets,vocabs,embeddings,
                                                             w_list,yangjie_rich_pretrain_word_path,
                                                          _refresh=refresh_data,_cache_fp=cache_name,
@@ -454,8 +463,8 @@ elif args.model =='lstm':
                           embed_dropout=args.embed_dropout,output_dropout=args.output_dropout,use_bigram=True,
                           debug=args.debug)
 
-for n,p in model.named_parameters():
-    print('{}:{}'.format(n,p.size()))
+# for n,p in model.named_parameters():
+#     print('{}:{}'.format(n,p.size()))
 
 with torch.no_grad():
     print_info('{}init pram{}'.format('*'*15,'*'*15))
@@ -478,13 +487,23 @@ loss = LossInForward()
 encoding_type = 'bmeso'
 if args.dataset == 'weibo' or args.dataset == 'aicup':
     encoding_type = 'bio'
-f1_metric = SpanFPreRecMetric(vocabs['label'],pred='pred',target='target',seq_len='seq_len',encoding_type=encoding_type)
+
+
+
+f1_metric = SpanFPreRecMetric(
+    vocabs['label'],
+    pred='pred',
+    target='target',
+    seq_len='seq_len',
+    encoding_type=encoding_type
+)
 acc_metric = AccuracyMetric(pred='pred',target='target',seq_len='seq_len',)
 acc_metric.set_metric_name('label_acc')
 metrics = [
     f1_metric,
-    acc_metric
+    acc_metric,
 ]
+
 if args.self_supervised:
     chars_acc_metric = AccuracyMetric(pred='chars_pred',target='chars_target',seq_len='seq_len')
     chars_acc_metric.set_metric_name('chars_acc')
@@ -555,7 +574,7 @@ class Unfreeze_Callback(Callback):
 def create_cb():
     lrschedule_callback = LRScheduler(lr_scheduler=LambdaLR(optimizer, lambda ep: 1 / (1 + 0.05*ep) ))
     clip_callback = GradientClipCallback(clip_type='value', clip_value=5)
-    save_callback = SaveModelCallback(top=1, save_dir=os.path.join(root_path, 'model', args.model_type))
+    save_callback = SaveModelCallback(top=1, save_dir=os.path.join(root_path, 'model', f'fold{args.fold}'))
     if args.cv:
         callbacks = [
             lrschedule_callback,
@@ -576,7 +595,6 @@ def create_cb():
             bert_embedding.requires_grad = True
 
     callbacks.append(EarlyStopCallback(args.early_stop))
-
 
     if args.warmup > 0 and args.model == 'transformer':
         callbacks.append(WarmupCallback(warmup=args.warmup,))
@@ -601,19 +619,26 @@ if args.status == 'train':
     # print(embeddings['word'](66))
     trainer.train()
     # print(embeddings['word'](66))
+    model = Predictor(model)
+    pred = model.predict(
+        datasets['dev'],
+        seq_len_field_name='seq_len',
+    )  
+    print(pred)
+    print(datasets['dev'])  
+
 else:
-    from fastNLP.core.predictor import Predictor
     from fastNLP.core.tester import Tester
 
-    mpath = '/home/dy/Flat-Lattice-Transformer/model/many/2020-12-16-04-56-45/epoch-55_step-8085_f-0.796231.pt'
+    
+    mpath = '/home/dy/Flat-Lattice-Transformer/model/fold0/2020-12-17-14-12-48/epoch-19_step-2964_f-0.765985.pt'
     print('predicting...')
-
-    model = Predictor(torch.load(mpath))
+    model = Predictor(torch.load(mpath, map_location=device))
     pred = model.predict(
         datasets['aicup_dev'],
         seq_len_field_name='seq_len',
-    )['pred']
-
+    )    
+    pred = pred['pred']
     sys.path.append('/home/dy/aicup/src')
     from dataset import romove_redundant_str, split_to_sentence, cut_words, get_fastnlp_ds
     from predict import load_dev, split_to_pred_per_article, write_result, count_article_length
@@ -627,7 +652,7 @@ else:
         offset_map.append(map_arr)
 
     pred = [vocabs['label'].to_word(ele) for arr in pred for ele in arr]
-    pred_per_article = split_to_pred_per_article([pred], count_article_length(dev_data)) 
+    pred_per_article = split_to_pred_per_article([pred], count_article_length(dev_data))
     print('writing file...')
     write_result(dev_data, pred_per_article, offset_map, origin_data)
 

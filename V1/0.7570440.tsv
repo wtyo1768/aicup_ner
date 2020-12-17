@@ -216,8 +216,6 @@ article_id	start_position	end_position	entity_text	entity_type
 8	1153	1156	563	profession
 8	1156	1158	87	ID
 9	3	6	林大華	name
-9	7	9	E1	name
-9	9	17	27388873	ID
 9	74	77	林醫師	name
 9	861	863	媽媽	family
 9	1220	1223	痾4月	time
@@ -235,6 +233,7 @@ article_id	start_position	end_position	entity_text	entity_type
 9	2797	2799	今天	time
 9	2807	2809	早上	time
 9	2913	2917	13.7	med_exam
+9	7	17	E127388873	ID
 10	8	11	李醫師	name
 10	43	47	上個禮拜	time
 10	129	132	這禮拜	time
@@ -343,7 +342,7 @@ article_id	start_position	end_position	entity_text	entity_type
 13	1165	1168	一二五	med_exam
 13	1169	1172	七十五	med_exam
 13	1182	1185	一一五	med_exam
-13	1273	1283	E137354975	contact
+13	1273	1283	E137354975	ID
 14	269	271	去年	time
 14	527	528	4	med_exam
 14	529	532	349	med_exam
@@ -754,8 +753,8 @@ article_id	start_position	end_position	entity_text	entity_type
 35	1250	1253	三個月	time
 35	1385	1388	鍾醫師	name
 35	1393	1397	兩個禮拜	time
-35	1801	1811	R103846354	contact
 35	1811	1814	吳光宏	name
+35	1801	1811	R103846354	ID
 36	13	18	41358	med_exam
 36	39	42	256	med_exam
 36	59	62	200	med_exam
@@ -770,10 +769,7 @@ article_id	start_position	end_position	entity_text	entity_type
 36	968	970	60	med_exam
 36	974	976	59	med_exam
 36	977	979	60	med_exam
-36	1116	1117	1	contact
-36	1117	1120	837	ID
-36	1120	1122	45	contact
-36	1122	1125	524	ID
+36	1115	1125	E183745524	ID
 37	82	85	130	med_exam
 37	89	92	130	med_exam
 37	187	191	一個禮拜	time
@@ -818,7 +814,7 @@ article_id	start_position	end_position	entity_text	entity_type
 39	1486	1490	8353	ID
 40	226	228	今天	time
 40	236	238	今天	time
-40	499	509	E184666204	contact
+40	499	509	E184666204	ID
 41	359	363	二十八歲	time
 41	406	408	婷婷	name
 41	578	584	4五百九十三	med_exam
@@ -877,8 +873,6 @@ article_id	start_position	end_position	entity_text	entity_type
 43	1005	1007	1月	time
 43	1018	1021	半年前	time
 44	3	6	許發財	name
-44	6	7	R	ID
-44	7	16	113566480	ID
 44	22	23	D	contact
 44	23	24	4	ID
 44	286	290	400多	med_exam
@@ -893,6 +887,7 @@ article_id	start_position	end_position	entity_text	entity_type
 44	531	533	98	med_exam
 44	540	542	98	med_exam
 44	692	694	普林	name
+44	6	16	R113566480	ID
 45	26	28	長庚	location
 45	38	40	昨天	time
 45	54	58	2750	med_exam
@@ -992,7 +987,6 @@ article_id	start_position	end_position	entity_text	entity_type
 48	1863	1866	吳小美	name
 48	1866	1871	66674	ID
 49	5	8	林大名	name
-49	9	18	113993846	ID
 49	266	268	晚上	time
 49	290	294	一個禮拜	time
 49	301	305	一個禮拜	time
@@ -1009,6 +1003,7 @@ article_id	start_position	end_position	entity_text	entity_type
 49	1225	1227	晚上	time
 49	1297	1299	晚上	time
 49	1303	1305	晚上	time
+49	8	18	R113993846	ID
 50	41	44	林醫師	name
 50	386	387	港	location
 50	639	643	一個禮拜	time
@@ -1239,8 +1234,6 @@ article_id	start_position	end_position	entity_text	entity_type
 62	1454	1458	150塊	money
 62	1894	1899	10/15	time
 62	1928	1932	3452	ID
-63	6	7	R	contact
-63	7	16	234526780	ID
 63	16	18	小萱	name
 63	19	21	今天	time
 63	88	90	今天	time
@@ -1260,6 +1253,7 @@ article_id	start_position	end_position	entity_text	entity_type
 63	1026	1030	1500	med_exam
 63	1233	1235	今天	time
 63	1269	1273	兩個禮拜	time
+63	6	16	R234526780	ID
 64	3	5	阿明	name
 64	12	14	今天	time
 64	35	39	900多	med_exam
@@ -1283,7 +1277,7 @@ article_id	start_position	end_position	entity_text	entity_type
 65	1742	1745	涂醫師	name
 65	1792	1794	下午	time
 65	2108	2111	涂醫師	name
-65	2302	2311	178290737	contact
+65	2301	2311	F178290737	ID
 66	3	5	小王	name
 66	6	10	這個禮拜	time
 66	35	37	昨天	time
@@ -1993,11 +1987,7 @@ article_id	start_position	end_position	entity_text	entity_type
 90	1235	1238	五個月	time
 90	1300	1303	六個月	time
 90	1435	1439	四個禮拜	time
-90	1525	1534	R22364029	contact
-90	1534	1535	8	ID
-91	3	4	A	name
-91	4	5	1	contact
-91	5	13	84058370	ID
+90	1525	1535	R223640298	ID
 91	14	15	阿	name
 91	15	16	輝	name
 91	155	159	奇美醫院	location
@@ -2023,6 +2013,7 @@ article_id	start_position	end_position	entity_text	entity_type
 91	1065	1069	2017	time
 91	1070	1072	兩年	time
 91	1078	1082	2017	time
+91	3	13	A184058370	ID
 92	44	48	一、二天	time
 92	52	56	一、二天	time
 92	184	188	一個禮拜	time
@@ -2061,22 +2052,20 @@ article_id	start_position	end_position	entity_text	entity_type
 92	1222	1224	五月	time
 92	1246	1249	六月中	time
 92	1258	1261	六月中	time
-92	1423	1424	A	contact
-92	1424	1433	148390275	ID
 92	1706	1708	凱柔	name
 92	1748	1750	今天	time
 92	1757	1761	兩個禮拜	time
 92	1778	1780	明天	time
 92	1799	1801	後天	time
 92	1828	1833	七月十八號	time
+92	1423	1433	A148390275	ID
 93	396	402	五、六個禮拜	time
 93	406	412	五、六個禮拜	time
 93	644	647	紀醫師	name
 93	650	653	四個月	time
 93	699	701	今天	time
 93	741	743	小花	name
-93	802	803	E	contact
-93	803	813	1287394675	ID
+93	802	812	E128739467	ID
 94	410	412	早上	time
 94	505	508	一百九	med_exam
 94	564	566	一日	time
@@ -2252,7 +2241,7 @@ article_id	start_position	end_position	entity_text	entity_type
 103	300	302	今天	time
 103	303	305	今年	time
 103	307	309	今天	time
-103	633	643	S137465537	contact
+103	633	643	S137465537	ID
 104	127	130	三個月	time
 104	267	274	十一月二十五號	time
 104	287	289	今天	time
@@ -2557,9 +2546,8 @@ article_id	start_position	end_position	entity_text	entity_type
 120	3720	3723	五六日	time
 120	3735	3737	今天	time
 121	4	7	這個月	time
-121	996	1004	A2893701	contact
-121	1004	1006	98	ID
 121	1017	1019	ok	contact
+121	996	1006	A289370198	ID
 122	4	7	這個月	time
 122	237	239	9月	time
 122	271	274	這個月	time
@@ -2635,7 +2623,7 @@ article_id	start_position	end_position	entity_text	entity_type
 126	681	684	160	med_exam
 126	685	687	58	med_exam
 126	728	730	今天	time
-126	743	753	R147380478	contact
+126	743	753	R147380478	ID
 127	181	182	三	profession
 127	182	183	商	location
 127	183	185	美邦	location
@@ -2905,10 +2893,6 @@ article_id	start_position	end_position	entity_text	entity_type
 141	2415	2418	三個月	time
 141	2423	2425	今天	time
 141	2429	2432	三個月	time
-142	15	16	R	contact
-142	16	17	1	profession
-142	17	23	003826	ID
-142	23	25	94	profession
 142	38	41	5個月	time
 142	1319	1323	兩個禮拜	time
 142	1326	1330	一個禮拜	time
@@ -2919,6 +2903,7 @@ article_id	start_position	end_position	entity_text	entity_type
 142	1987	1989	今天	time
 142	2658	2660	晚上	time
 142	2664	2666	下午	time
+142	15	25	R100382694	ID
 143	24	26	八月	time
 143	89	92	三個月	time
 143	305	309	8月9號	time
@@ -2992,8 +2977,6 @@ article_id	start_position	end_position	entity_text	entity_type
 145	1612	1616	一個禮拜	time
 145	1669	1673	8932	ID
 146	3	5	小華	name
-146	6	7	E	name
-146	7	16	189370256	ID
 146	36	39	這個月	time
 146	46	49	十月底	time
 146	64	69	上……上周	time
@@ -3006,6 +2989,7 @@ article_id	start_position	end_position	entity_text	entity_type
 146	1189	1191	今天	time
 146	1196	1199	三個月	time
 146	1210	1214	九百多塊	money
+146	6	16	E189370256	ID
 147	5	8	這個月	time
 147	40	43	這個月	time
 147	66	68	今天	time
@@ -3343,5 +3327,5 @@ article_id	start_position	end_position	entity_text	entity_type
 158	1074	1076	今天	time
 158	1082	1086	第三個月	time
 158	1199	1201	小安	name
-158	1380	1390	A124699678	contact
 158	1489	1491	明年	time
+158	1380	1390	A124699678	ID

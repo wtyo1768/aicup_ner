@@ -24,30 +24,24 @@ def load_aicup_ner(
     char_word_dropout=0.01,
     cv=False,
     model_type='many',
+    fold=0,
     ):
-
     vocabs = {}
     embeddings = {}
-    if cv:
-        train_texts, train_tags, val_texts, val_tags = get_fastnlp_ds(mode=model_type, cv=cv)
-    else:     
-        train_texts, train_tags, val_texts, val_tags, test_texts, test_tags = get_fastnlp_ds(mode=model_type, cv=cv)
-    
-    train_ds = DataSet({'chars':train_texts, 'target':train_tags})
-    dev_ds = DataSet({'chars':val_texts, 'target':val_tags})
+
+    train_path = os.path.join(path, 'augment', f'train{fold}')
+    dev_path = os.path.join(path, 'raw_data', f'dev{fold}')
+    print('loading data from', train_path,'\nand', dev_path)
+    loader = ConllLoader(['chars', 'target'])
+
+    train = loader.load(train_path)
+    dev = loader.load(dev_path)
+ 
     ds = {
-        'train':train_ds,
-        'dev':dev_ds,
+        'train':train.datasets['train'],
+        'dev':dev.datasets['train'],
     }
-    if not cv:
-        ds['test'] = DataSet({'chars':test_texts, 'target':test_tags})
     ds['aicup_dev'], offset_map = get_aicup_devds()
-
-    # loader = ConllLoader(['chars', 'target'])
-    # for ds_name in ['train', 'dev', 'test']:
-        # bundle = loader.load(os.path.join(path, ds_name))
-        # ds[ds_name] = bundle.datasets['train']
-
 
     for ds_name in ds.keys():
         ds[ds_name].apply_field(get_bigrams, 'chars', 'bigrams')
@@ -62,6 +56,7 @@ def load_aicup_ner(
 
     label_vocab.from_dataset(ds['train'], field_name='target')
 
+    print(set([ele[0].split('-')[1] if ele[0]!='O' and ele[0][0]!='<' else ele[0] for ele in list(label_vocab)]))
     if cv: no_create_entry_ds = [ds['dev'], ds['aicup_dev']]
     else: no_create_entry_ds = [ds['dev'], ds['test'], ds['aicup_dev']]
         
@@ -80,12 +75,10 @@ def load_aicup_ner(
     vocabs['label'] = label_vocab
     vocabs['bigram'] = bigram_vocab
 
-    # convert words to index in the vocab
     if index_token:
         char_vocab.index_dataset(*list(ds.values()), field_name='chars', new_field_name='chars')
         bigram_vocab.index_dataset(*list(ds.values()),field_name='bigrams',new_field_name='bigrams')
-        label_vocab.index_dataset(*list(ds.values()), field_name='target', new_field_name='target')
-
+        label_vocab.index_dataset(*list([ds['train'], ds['dev']]), field_name='target', new_field_name='target')
 
     unigram_embedding = StaticEmbedding(
         char_vocab, 
@@ -94,7 +87,6 @@ def load_aicup_ner(
         min_freq=char_min_freq,
         only_train_min_freq=only_train_min_freq,
     )
-
     bigram_embedding = StaticEmbedding(
         bigram_vocab, 
         model_dir_or_name=bigram_embedding_path,
@@ -102,7 +94,6 @@ def load_aicup_ner(
         min_freq=bigram_min_freq,
         only_train_min_freq=only_train_min_freq,
     )
-
     embeddings['char'] = unigram_embedding
     embeddings['bigram'] = bigram_embedding
 
@@ -114,45 +105,27 @@ def get_aicup_devds():
     
     offset_mapping = []
     for idx in range(len(raw_data)):
-        # print(idx)
         raw_data[idx], offset_map = romove_redundant_str(raw_data[idx], dev_mode=True)
         offset_mapping.append(offset_map)
 
     split_docs, type_tensor = split_to_sentence(raw_data, None, 128)
 
-    # import opencc
-    # converter = opencc.OpenCC('t2s.json')
-
-    # for idx in range(len(split_docs)):
-    #     split_docs[idx] = converter.convert(split_docs[idx])
-
-    # split_docs = cut_words(split_docs)
     dev_ds = DataSet({'chars':split_docs})    
     return dev_ds, offset_mapping
 
 
 if __name__ == "__main__":
-
-    # ds = get_aicup_devds()
-    # ds.add_seq_len('chars', new_field_name='seq_len')
-    # print(ds)
-
-    loader = ConllLoader(['chars', 'target'], dropna=False)
-    for ds_name in ['train', 'dev', 'test']:
-        bundle = loader.load(os.path.join(root_path,'data', ds_name))
-        ds[ds_name] = bundle.datasets['train']
-    print(ds[ds_name])
-    # from paths import *   
-
-    # ds, vocabs, embeddings = load_aicup_ner(
-    #     aicup_ner_path,
-    #     yangjie_rich_pretrain_unigram_path,
-    #     yangjie_rich_pretrain_bigram_path,
-    #     _refresh=True,
-    #     index_token=False,
-    #     _cache_fp='./cache',
-    #     char_min_freq=1,
-    #     bigram_min_freq=1,
-    #     only_train_min_freq=1
-    # )
-    # print(ds['train'])
+    
+    load_aicup_ner(
+        aicup_ner_path,
+        yangjie_rich_pretrain_unigram_path,
+        yangjie_rich_pretrain_bigram_path,
+        index_token=True,
+        char_min_freq=1,
+        bigram_min_freq=1,
+        only_train_min_freq=True,
+        char_word_dropout=0.01,
+        cv=True,
+        model_type='many',
+        fold=0,
+    )
