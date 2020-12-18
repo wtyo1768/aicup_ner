@@ -386,7 +386,7 @@ if args.model == 'transformer':
             bert_embedding = BertEmbedding(
                 vocabs['lattice'],
                 model_dir_or_name='cn-wwm',
-                requires_grad=True,
+                requires_grad=False,
                 word_dropout=0.01,
                 layers='-3, -1',
             )
@@ -615,7 +615,7 @@ else:
     from fastNLP.core.tester import Tester
 
     
-    mpath = '/home/dy/Flat-Lattice-Transformer/model/fold0/2020-12-17-22-45-12/epoch-14_step-3276_f-0.745679.pt'
+    mpath = '/home/dy/Flat-Lattice-Transformer/model/fold0/2020-12-18-10-47-25/epoch-56_step-9632_f-0.776786.pt'
     print('predicting...')
     model = Predictor(torch.load(mpath, map_location=device))
     pred = model.predict(
@@ -623,9 +623,8 @@ else:
         seq_len_field_name='seq_len',
     )    
     pred = pred['pred']
-    sys.path.append('/home/dy/aicup/src')
-    from dataset import romove_redundant_str, split_to_sentence, cut_words, get_fastnlp_ds
-    from predict import load_dev, split_to_pred_per_article, write_result, count_article_length
+    from src.dataset  import romove_redundant_str
+    from src.predict import load_dev, split_to_pred_per_article, write_result, count_article_length
     
     dev_data = load_dev()
     origin_data = load_dev(simplify=False)

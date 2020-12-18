@@ -1,10 +1,7 @@
 import sys
-sys.path.append('/home/dy/aicup/src')
-from predict import load_dev
-from cocoNLP.extractor import extractor
+from src.predict import load_dev
 import re
 import pandas as pd
-import re
 import numpy as np
 
 

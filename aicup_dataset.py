@@ -6,9 +6,9 @@ from fastNLP import DataSet
 from utils import get_bigrams
 import os
 import sys
-sys.path.append('/home/dy/aicup/src')
-from dataset import romove_redundant_str, split_to_sentence, cut_words, get_fastnlp_ds
-from predict import load_dev
+# sys.path.append('/home/dy/Flat-Lattice-Transformer/src')
+from src.dataset import romove_redundant_str, split_to_sentence, cut_words, get_fastnlp_ds
+from src.predict import load_dev
 from paths import *
 
 
