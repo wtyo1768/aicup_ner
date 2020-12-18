@@ -481,7 +481,11 @@ def fix_BIOES_tag(fix_tag):
     return fix_tag
 
 
+HANDLE = 'minority'
 model_type = {
+    'minority' : [
+        'ID', 'education', 'location', 'family', 'profession',
+    ],
     'number' : [
         'money', 'time','med_exam',
         'ID', 
@@ -490,8 +494,9 @@ model_type = {
         'money', 'time', 'contact', 'family',
         'location', 'education',
         'name', 'profession', 
-    ]
+    ],
 }
+aug_size = 3
 
 if __name__ == "__main__":
     '''
@@ -508,10 +513,9 @@ if __name__ == "__main__":
         Augment data need to split into sentence
     ''' 
     
-    HANDLE = 'number'
     aug_type = model_type[HANDLE]
     remove_sentence_with_allO = False
-
+    
     # 1.
     trainingset, position, _ = loadInputFile(fpath, mode='many')
     texts, tags, input_id_types = preprocess_input(trainingset, position)
@@ -538,7 +542,7 @@ if __name__ == "__main__":
         prefix = f'./data/fold{idx}/'
         write_ds(f'{prefix}filtered/origin', orgin_train, orgin_tags, split_sen=False)
         write_ds(f'{prefix}filtered/raw', filtered_texts, filtered_tags, split_sen=False)
-        aug_texts, aug_tags = augment(prefix, idx, aug_type=aug_type, augument_size=1)
+        aug_texts, aug_tags = augment(prefix, idx, aug_type=aug_type, augument_size=aug_size)
         write_ds(f'{prefix}dev/dev', dev_text, dev_tags)
 
 

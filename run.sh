@@ -11,7 +11,7 @@ python3 flat_main.py \
     --use_bert 1 \
     --only_bert 0 \
     --weight_decay 0.03 \
-    --after_bert 'mlp' \
+    --after_bert 'lstm' \
     --warmup 0.05 \
     --optim 'sgd' \
     --fix_bert_epoch 0 \
