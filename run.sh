@@ -14,8 +14,8 @@ python3 flat_main.py \
     --after_bert 'mlp' \
     --warmup 0.05 \
     --optim 'sgd' \
-    --fix_bert_epoch 20 \
-    --epoch 100 \
+    --fix_bert_epoch 0 \
+    --epoch 20 \
     --batch 16 \
     --status 'train' \
     --lexicon_name 'lk' \

@@ -381,9 +381,11 @@ class Lattice_Transformer_SeqLabel(nn.Module):
         self.output_dropout = MyDropout(self.dropout['output'])
 
         print('pos_tag len...' ,len(list(vocabs['pos_tag'])))
-        self.pos_embedding = nn.Embedding(len(list(vocabs['pos_tag'])), 32)
-        
-        self.output = nn.Linear(self.hidden_size,self.label_size)
+
+        self.pos_embed_size = 32
+        self.pos_embedding = nn.Embedding(len(list(vocabs['pos_tag'])), self.pos_embed_size)
+
+        self.output = nn.Linear(self.hidden_size+self.pos_embed_size,self.label_size)
         if self.self_supervised:
             self.output_self_supervised = nn.Linear(self.hidden_size,len(vocabs['char']))
             print('self.output_self_supervised:{}'.format(self.output_self_supervised.weight.size()))
@@ -474,8 +476,8 @@ class Lattice_Transformer_SeqLabel(nn.Module):
         # print('encoded:', encoded.shape)
         pos_embed = self.pos_embedding(pos_tag)
 
-        pred = torch.cat([encoded, pos_embed],dim=-1)
-        # print('concated:', pred.shape)
+        encoded = torch.cat([encoded, pos_embed],dim=-1)
+        # print('concated:', encoded.shape)
 
         pred = self.output(encoded)
         mask = seq_len_to_mask(seq_len).bool()

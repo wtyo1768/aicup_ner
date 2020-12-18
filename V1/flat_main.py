@@ -48,7 +48,7 @@ parser.add_argument('--model_type',type=str,default='few')
 parser.add_argument('--fold',type=int,default=0)
 
 parser.add_argument('--update_every',type=int,default=1)
-parser.add_argument('--status',choices=['train','test'],default='train')
+parser.add_argument('--status',choices=['train','test', 'bagging'],default='train')
 parser.add_argument('--use_bert',type=int,default=1)
 parser.add_argument('--only_bert',type=int,default=0)
 parser.add_argument('--fix_bert_epoch',type=int,default=20)
@@ -549,6 +549,13 @@ class Unfreeze_Callback(Callback):
         if self.epoch == self.fix_epoch_num+1:
             self.bert_embedding.requires_grad = True
 
+def vote(all_pred, reshape_dim1, reshape_dim2):
+    result = np.zeros((reshape_dim1, reshape_dim2))
+    for i in range(len(all_pred)):
+        for j in range(len(all_pred[i])):
+            tmp = np.bincount(np.array(all_pred[i][j].astype(int)))
+            result[i][j] = np.argmax(tmp)
+    return result.astype(int)
 
 def create_cb():
     lrschedule_callback = LRScheduler(lr_scheduler=LambdaLR(optimizer, lambda ep: 1 / (1 + 0.05*ep) ))
@@ -611,6 +618,61 @@ if args.status == 'train':
     ]
     cls_res = classification_report(target, pred)
     print(cls_res)
+
+elif args.status == 'bagging':
+    models_path = [
+        '/home/dy/Flat-Lattice-Transformer/model/fold0/2020-12-18-21-16-56/epoch-14_step-2772_f-0.702703.pt',
+        '/home/dy/Flat-Lattice-Transformer/model/fold0/2020-12-18-21-16-56/epoch-14_step-2772_f-0.702703.pt',
+        '/home/dy/Flat-Lattice-Transformer/model/fold0/2020-12-18-21-16-56/epoch-14_step-2772_f-0.702703.pt'
+    ]
+
+    all_pred = []
+    for path_num in range(len(models_path)):
+
+        '''這邊GET每個MODEL的PREDICTION'''
+        model = Predictor(torch.load(models_path[path_num], map_location=device))
+        pred = model.predict(
+            datasets['aicup_dev'],
+            seq_len_field_name='seq_len',
+        )
+        pred = pred['pred']
+
+        '''記住等等的dim'''
+        reshape_dim1 = len(pred)
+        reshape_dim2 = len(pred[0])
+
+        '''所有模型的答案都接上去'''
+        all_pred.append(pred)
+
+    
+    combined_pred = np.zeros((reshape_dim1, reshape_dim2, len(models_path)))
+
+    for i, row in enumerate(all_pred):
+        for j, col in enumerate(row):
+            combined_pred[j][i] = [all_pred[m][j][i] for m in range(len(models_path))]
+
+    vote_result = vote(combined_pred, reshape_dim1, reshape_dim2)
+
+    print('vote result: ', vote_result)
+    pred = []
+    for i in range(len(vote_result)):
+        pred.append(vote_result[i])
+    print('pred: ', pred)
+    from src.dataset  import romove_redundant_str
+    from src.predict import load_dev, split_to_pred_per_article, write_result, count_article_length
+    
+    dev_data = load_dev()
+    origin_data = load_dev(simplify=False)
+
+    offset_map = []
+    for idx in range(len(dev_data)):
+        dev_data[idx], map_arr = romove_redundant_str(dev_data[idx], dev_mode=True)
+        offset_map.append(map_arr)
+
+    pred = [vocabs['label'].to_word(ele) for arr in pred for ele in arr]
+    pred_per_article = split_to_pred_per_article([pred], count_article_length(dev_data))
+    print('writing file...')
+    write_result(dev_data, pred_per_article, offset_map, origin_data)
 
 else:
     from fastNLP.core.tester import Tester
