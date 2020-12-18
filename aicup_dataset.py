@@ -10,6 +10,8 @@ import sys
 from src.dataset import romove_redundant_str, split_to_sentence, cut_words, get_fastnlp_ds
 from src.predict import load_dev
 from paths import *
+import jieba
+import jieba.posseg as pseg
 
 
 @cache_results(_cache_fp='cache/aicupNER_uni+bi', _refresh=True)
@@ -41,22 +43,24 @@ def load_aicup_ner(
         'train':train.datasets['train'],
         'dev':dev.datasets['train'],
     }
-    ds['aicup_dev'], offset_map = get_aicup_devds()
+    ds['aicup_dev'] = get_aicup_devds()
 
     for ds_name in ds.keys():
         ds[ds_name].apply_field(get_bigrams, 'chars', 'bigrams')
         ds[ds_name].add_seq_len('chars', new_field_name='seq_len')
+        ds[ds_name].apply_field(get_pos_tag, 'chars', 'pos_tag')
 
-    for k,v in ds.items():
-        print('{}:{}'.format(k,len(v)))
+    for k, v in ds.items():
+        print('{}:{}'.format(k, len(v)))
 
     char_vocab = Vocabulary()
     bigram_vocab = Vocabulary()
     label_vocab = Vocabulary()
+    pos_vocab = Vocabulary()
 
     label_vocab.from_dataset(ds['train'], field_name='target')
+    pos_vocab.from_dataset(*list(ds.values()), field_name='pos_tag')
 
-    print(set([ele[0].split('-')[1] if ele[0]!='O' and ele[0][0]!='<' else ele[0] for ele in list(label_vocab)]))
     if cv: no_create_entry_ds = [ds['dev'], ds['aicup_dev']]
     else: no_create_entry_ds = [ds['dev'], ds['test'], ds['aicup_dev']]
         
@@ -70,16 +74,18 @@ def load_aicup_ner(
         field_name='bigrams',
         no_create_entry_dataset=no_create_entry_ds
     )
-
     vocabs['char'] = char_vocab
     vocabs['label'] = label_vocab
     vocabs['bigram'] = bigram_vocab
-
+    vocabs['pos_tag'] = pos_vocab
+    
     if index_token:
         char_vocab.index_dataset(*list(ds.values()), field_name='chars', new_field_name='chars')
         bigram_vocab.index_dataset(*list(ds.values()),field_name='bigrams',new_field_name='bigrams')
         label_vocab.index_dataset(*list([ds['train'], ds['dev']]), field_name='target', new_field_name='target')
-
+    
+    pos_vocab.index_dataset(*list(ds.values()),field_name='pos_tag', new_field_name='pos_tag')
+    
     unigram_embedding = StaticEmbedding(
         char_vocab, 
         model_dir_or_name=unigram_embedding_path,                          
@@ -88,7 +94,7 @@ def load_aicup_ner(
         only_train_min_freq=only_train_min_freq,
     )
     bigram_embedding = StaticEmbedding(
-        bigram_vocab, 
+        bigram_vocab,
         model_dir_or_name=bigram_embedding_path,
         word_dropout=0.01,
         min_freq=bigram_min_freq,
@@ -96,33 +102,58 @@ def load_aicup_ner(
     )
     embeddings['char'] = unigram_embedding
     embeddings['bigram'] = bigram_embedding
-
-    return ds, vocabs, embeddings, offset_map
+    print(ds['train'])
+    print(set([ele[0].split('-')[1] if ele[0]!='O' and ele[0][0]!='<' else ele[0] for ele in list(label_vocab)]))
+    return ds, vocabs, embeddings
 
 
 def get_aicup_devds():
     raw_data = load_dev()
-    
-    offset_mapping = []
+    # offset_mapping = []
     for idx in range(len(raw_data)):
-        raw_data[idx], offset_map = romove_redundant_str(raw_data[idx], dev_mode=True)
-        offset_mapping.append(offset_map)
+        raw_data[idx], _ = romove_redundant_str(raw_data[idx], dev_mode=True)
+        # offset_mapping.append(offset_map)
 
     split_docs, type_tensor = split_to_sentence(raw_data, None, 128)
+    dev_ds = DataSet({'chars':split_docs})  
 
-    dev_ds = DataSet({'chars':split_docs})    
-    return dev_ds, offset_mapping
+    return dev_ds
 
+
+def get_pos_tag(sen):
+    sentences = ''.join(sen)
+    pos = pseg.cut(sentences)
+
+    pos_tag = []
+    for words, tag in pos:
+        pos_tag += [tag] * len(words)
+
+    assert len(sen) == len(pos_tag)
+    return pos_tag
+    
 
 if __name__ == "__main__":
+    # raw_data = load_dev()
     
-    train_path = os.path.join(aicup_ner_path, 'augment', f'train0')
+    # offset_mapping = []
+    # for idx in range(len(raw_data)):
+    #     raw_data[idx], offset_map = romove_redundant_str(raw_data[idx], dev_mode=True)
+    #     offset_mapping.append(offset_map)
+
+    # split_docs, type_tensor = split_to_sentence(raw_data, None, 128)
+    # docs_pos_tag = get_pos_tag(split_docs)
+    # # print(split_docs[0])
+    
+    # exit()
+    train_path = os.path.join(aicup_ner_path, 'fold0', 'train/train')
     loader = ConllLoader(['chars', 'target'])
 
     train = loader.load(train_path)
  
     ds = train.datasets['train']
-    print(list(ds['target']))
+    ds.apply_field(get_pos_tag, 'chars', 'pos_tag')
+
+    print(ds)
     # load_aicup_ner(
     #     aicup_ner_path,
     #     yangjie_rich_pretrain_unigram_path,

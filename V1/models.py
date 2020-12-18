@@ -233,7 +233,8 @@ class Lattice_Transformer_SeqLabel(nn.Module):
                  rel_pos_shared=True,max_seq_len=-1,k_proj=True,q_proj=True,v_proj=True,r_proj=True,
                  self_supervised=False,attn_ff=True,pos_norm=False,ff_activate='relu',rel_pos_init=0,
                  abs_pos_fusion_func='concat',embed_dropout_pos='0',
-                 four_pos_shared=True,four_pos_fusion=None,four_pos_fusion_shared=True,bert_embedding=None):
+                 four_pos_shared=True,four_pos_fusion=None,four_pos_fusion_shared=True,
+                 bert_embedding=None):
         '''
         :param rel_pos_init: 如果是0，那么从-max_len到max_len的相对位置编码矩阵就按0-2*max_len来初始化，
         如果是1，那么就按-max_len,max_len来初始化
@@ -242,12 +243,12 @@ class Lattice_Transformer_SeqLabel(nn.Module):
         是2就在绝对位置加上之后dropout
         '''
         super().__init__()
-
+        
         self.use_bert = False
         if bert_embedding is not None:
             self.use_bert = True
             self.bert_embedding = bert_embedding
-
+        
         self.four_pos_fusion_shared = four_pos_fusion_shared
         self.mode = mode
         self.four_pos_shared = four_pos_shared
@@ -379,6 +380,9 @@ class Lattice_Transformer_SeqLabel(nn.Module):
 
         self.output_dropout = MyDropout(self.dropout['output'])
 
+        print('pos_tag len...' ,len(list(vocabs['pos_tag'])))
+        self.pos_embedding = nn.Embedding(len(list(vocabs['pos_tag'])), 32)
+        
         self.output = nn.Linear(self.hidden_size,self.label_size)
         if self.self_supervised:
             self.output_self_supervised = nn.Linear(self.hidden_size,len(vocabs['char']))
@@ -387,7 +391,7 @@ class Lattice_Transformer_SeqLabel(nn.Module):
         self.loss_func = nn.CrossEntropyLoss(ignore_index=-100)
 
 
-    def forward(self, lattice, bigrams, seq_len, lex_num, pos_s, pos_e,
+    def forward(self, lattice, bigrams, seq_len, lex_num, pos_s, pos_e, pos_tag, 
                 target=None, chars_target=None):
         if self.mode['debug']:
             print('lattice:{}'.format(lattice))
@@ -400,7 +404,7 @@ class Lattice_Transformer_SeqLabel(nn.Module):
         batch_size = lattice.size(0)
         max_seq_len_and_lex_num = lattice.size(1)
         max_seq_len = bigrams.size(1)
-
+        # print(pos_tag)
         raw_embed = self.lattice_embed(lattice)
         #raw_embed 是字和词的pretrain的embedding，但是是分别trian的，所以需要区分对待
         if self.use_bigram:
@@ -419,19 +423,23 @@ class Lattice_Transformer_SeqLabel(nn.Module):
             mask = seq_len_to_mask(seq_len).bool()
             char_for_bert = char_for_bert.masked_fill((~mask),self.vocabs['lattice'].padding_idx)
             bert_embed = self.bert_embedding(char_for_bert)
+            pos_embed = self.pos_embedding(pos_tag)
             bert_embed = torch.cat([bert_embed,
                                     torch.zeros(size=[batch_size,bert_pad_length,bert_embed.size(-1)],
                                                 device = bert_embed.device,
                                                 requires_grad=False)],dim=-2)
+            # print('bert',bert_embed.shape)
+            # print('raw',raw_embed_char.shape)
             raw_embed_char = torch.cat([raw_embed_char, bert_embed],dim=-1)
-
+            # print('concated_raw',raw_embed_char.shape)
+            # print('pos', pos_embed.shape)
         if self.embed_dropout_pos == '0':
             raw_embed_char = self.embed_dropout(raw_embed_char)
             raw_embed = self.gaz_dropout(raw_embed)
 
-
         embed_char = self.char_proj(raw_embed_char)
-
+        # print('char:', embed_char.shape)
+        
         if self.mode['debug']:
             print('embed_char:{}'.format(embed_char[:2]))
         char_mask = seq_len_to_mask(seq_len,max_len=max_seq_len_and_lex_num).bool()
@@ -446,18 +454,13 @@ class Lattice_Transformer_SeqLabel(nn.Module):
 
         assert char_mask.size(1) == lex_mask.size(1)
 
-
-
         embedding = embed_char + embed_lex
         if self.mode['debug']:
             print('embedding:{}'.format(embedding[:2]))
-
         if self.embed_dropout_pos == '1':
             embedding = self.embed_dropout(embedding)
-
         if self.use_abs_pos:
             embedding = self.abs_pos_encode(embedding,pos_s,pos_e)
-
         if self.embed_dropout_pos == '2':
             embedding = self.embed_dropout(embedding)
 
@@ -466,10 +469,15 @@ class Lattice_Transformer_SeqLabel(nn.Module):
         if hasattr(self,'output_dropout'):
             encoded = self.output_dropout(encoded)
 
-
+        # print('target', target.shape)
         encoded = encoded[:,:max_seq_len,:]
-        pred = self.output(encoded)
+        # print('encoded:', encoded.shape)
+        pos_embed = self.pos_embedding(pos_tag)
 
+        pred = torch.cat([encoded, pos_embed],dim=-1)
+        # print('concated:', pred.shape)
+
+        pred = self.output(encoded)
         mask = seq_len_to_mask(seq_len).bool()
 
         if self.mode['debug']:

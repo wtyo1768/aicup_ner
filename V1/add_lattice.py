@@ -53,13 +53,11 @@ def equip_chinese_ner_with_lexicon(datasets,vocabs,embeddings,w_list,word_embedd
     def get_skip_path(chars, w_trie):
         sentence = ''.join(chars)
         result = w_trie.get_lexicon(sentence)
-        # print(result)
-
         return result
+
     from V0.utils_ import Trie
     from functools import partial
     from fastNLP.core import Vocabulary
-    # from fastNLP.embeddings import StaticEmbedding
     from fastNLP_module import StaticEmbedding
     from fastNLP import DataSet
     a = DataSet()
@@ -86,9 +84,9 @@ def equip_chinese_ner_with_lexicon(datasets,vocabs,embeddings,w_list,word_embedd
     import copy
     for k,v in datasets.items():
         v.apply_field(partial(get_skip_path,w_trie=w_trie),'chars','lexicons')
-        v.apply_field(copy.copy, 'chars','raw_chars')
-        v.add_seq_len('lexicons','lex_num')
-        v.apply_field(lambda x:list(map(lambda y: y[0], x)), 'lexicons', 'lex_s')
+        v.apply_field(copy.copy, 'chars', 'raw_chars')
+        v.add_seq_len('lexicons', 'lex_num')
+        v.apply_field(lambda x: list(map(lambda y: y[0], x)), 'lexicons', 'lex_s')
         v.apply_field(lambda x: list(map(lambda y: y[1], x)), 'lexicons', 'lex_e')
 
 

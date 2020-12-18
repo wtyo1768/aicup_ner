@@ -493,7 +493,6 @@ model_type = {
     ]
 }
 
-
 if __name__ == "__main__":
     '''
     1. Data =>> Training, Validation (Sentence)
@@ -507,9 +506,12 @@ if __name__ == "__main__":
     4. Concat Augment and Training data. (Sentence)
 
         Augment data need to split into sentence
-    '''
+    ''' 
     
+    HANDLE = 'number'
+    aug_type = model_type[HANDLE]
     remove_sentence_with_allO = False
+
     # 1.
     trainingset, position, _ = loadInputFile(fpath, mode='many')
     texts, tags, input_id_types = preprocess_input(trainingset, position)
@@ -525,10 +527,7 @@ if __name__ == "__main__":
 
     # Kfold split
     kf = ShuffleSplit(n_splits=5, test_size=0.2, random_state=0)
-    aug_type= [
-        'family', 'profession', 'education', 'location', 
-        'time' , 'money', 'med_exam'
-    ]
+    
     for idx, (train, test) in enumerate(kf.split(texts)):
         orgin_train, orgin_tags = texts[train].tolist(), tags[train].tolist()
         dev_text, dev_tags = texts[test], tags[test]
@@ -539,7 +538,7 @@ if __name__ == "__main__":
         prefix = f'./data/fold{idx}/'
         write_ds(f'{prefix}filtered/origin', orgin_train, orgin_tags, split_sen=False)
         write_ds(f'{prefix}filtered/raw', filtered_texts, filtered_tags, split_sen=False)
-        aug_texts, aug_tags = augment(prefix, idx, aug_type=aug_type, augument_size=3)
+        aug_texts, aug_tags = augment(prefix, idx, aug_type=aug_type, augument_size=1)
         write_ds(f'{prefix}dev/dev', dev_text, dev_tags)
 
 

@@ -214,7 +214,7 @@ if args.dataset == 'weibo':
                                             )
 elif args.dataset == 'aicup':
     from aicup_dataset import load_aicup_ner
-    datasets,vocabs,embeddings,offset_map = load_aicup_ner(aicup_ner_path,yangjie_rich_pretrain_unigram_path,yangjie_rich_pretrain_bigram_path,
+    datasets,vocabs,embeddings = load_aicup_ner(aicup_ner_path,yangjie_rich_pretrain_unigram_path,yangjie_rich_pretrain_bigram_path,
                                                 _refresh=refresh_data,index_token=False,
                                                 _cache_fp=raw_dataset_cache_name,
                                                 char_min_freq=args.char_min_freq,
@@ -342,6 +342,7 @@ for k, v in datasets.items():
             v.set_input('chars','bigrams','seq_len')
         else:
             v.set_input('chars','bigrams','seq_len','target')
+    v.set_input('pos_tag')
 
 
 from utils import norm_static_embedding
@@ -388,7 +389,7 @@ if args.model == 'transformer':
                 model_dir_or_name='cn-wwm',
                 requires_grad=False,
                 word_dropout=0.01,
-                layers='-3, -1',
+                layers='-1',
             )
         else:
             bert_embedding = None
