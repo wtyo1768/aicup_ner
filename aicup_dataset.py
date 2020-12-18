@@ -17,20 +17,20 @@ def load_aicup_ner(
     path,
     unigram_embedding_path=None,
     bigram_embedding_path=None,
+    char_word_dropout=0.01,
+    only_train_min_freq=0,
+    bigram_min_freq=1,
+    model_type='many',
     index_token=True,
     char_min_freq=1,
-    bigram_min_freq=1,
-    only_train_min_freq=0,
-    char_word_dropout=0.01,
     cv=False,
-    model_type='many',
     fold=0,
     ):
     vocabs = {}
     embeddings = {}
 
-    train_path = os.path.join(path, 'augment', f'train{fold}')
-    dev_path = os.path.join(path, 'raw_data', f'dev{fold}')
+    train_path = os.path.join(path, f'fold{fold}', 'train/train')
+    dev_path = os.path.join(path, f'fold{fold}', 'dev/dev',)
     print('loading data from', train_path,'\nand', dev_path)
     loader = ConllLoader(['chars', 'target'])
 
@@ -116,16 +116,23 @@ def get_aicup_devds():
 
 if __name__ == "__main__":
     
-    load_aicup_ner(
-        aicup_ner_path,
-        yangjie_rich_pretrain_unigram_path,
-        yangjie_rich_pretrain_bigram_path,
-        index_token=True,
-        char_min_freq=1,
-        bigram_min_freq=1,
-        only_train_min_freq=True,
-        char_word_dropout=0.01,
-        cv=True,
-        model_type='many',
-        fold=0,
-    )
+    train_path = os.path.join(aicup_ner_path, 'augment', f'train0')
+    loader = ConllLoader(['chars', 'target'])
+
+    train = loader.load(train_path)
+ 
+    ds = train.datasets['train']
+    print(list(ds['target']))
+    # load_aicup_ner(
+    #     aicup_ner_path,
+    #     yangjie_rich_pretrain_unigram_path,
+    #     yangjie_rich_pretrain_bigram_path,
+    #     index_token=True,
+    #     char_min_freq=1,
+    #     bigram_min_freq=1,
+    #     only_train_min_freq=True,
+    #     char_word_dropout=0.01,
+    #     cv=True,
+    #     model_type='many',
+    #     fold=0,
+    # )

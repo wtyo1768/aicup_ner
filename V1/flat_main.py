@@ -113,7 +113,6 @@ parser.add_argument('--r_proj',default=True)
 
 parser.add_argument('--attn_ff',default=False)
 
-# parser.add_argument('--rel_pos', default=False)
 parser.add_argument('--use_abs_pos',default=False)
 parser.add_argument('--use_rel_pos',default=True)
 #相对位置和绝对位置不是对立的，可以同时使用
@@ -152,7 +151,7 @@ parser.add_argument('--abs_pos_fusion_func',default='nonlinear_add',
                     choices=['add','concat','nonlinear_concat','nonlinear_add','concat_nonlinear','add_nonlinear'])
 
 parser.add_argument('--dataset', default='ontonotes', help='weibo|resume|ontonotes|msra|aicup')
-# parser.add_argument('--debug',default=1)
+
 
 
 
@@ -169,11 +168,9 @@ if over_all_dropout>0:
     args.attn_dropout = over_all_dropout
 
 
-
 if args.lattice and args.use_rel_pos:
     args.train_clip = True
 
-# fitlog.commit(__file__,fit_msg='绝对位置用新的了')
 fitlog.set_log_dir('logs')
 now_time = get_peking_time()
 logger.add_file('log/{}'.format(now_time),level='info')
@@ -181,7 +178,6 @@ if args.test_batch == -1:
     args.test_batch = args.batch//2
 fitlog.add_hyper(now_time,'time')
 if args.debug:
-    # args.dataset = 'toy'
     pass
 
 
@@ -193,10 +189,8 @@ else:
 
 refresh_data = False
 
-
 for k,v in args.__dict__.items():
     print_info('{} : {}'.format(k,v))
-
 
 raw_dataset_cache_name = os.path.join('cache',
                                       'k{}'.format(args.fold)
@@ -230,7 +224,6 @@ elif args.dataset == 'aicup':
                                                 model_type=args.model_type,
                                                 fold=args.fold,
                                             )
-
 
 if args.gaz_dropout < 0:
     args.gaz_dropout = args.embed_dropout
@@ -288,7 +281,6 @@ for k,v in datasets.items():
         if max_seq_len < v[i]['seq_len']:
             max_seq_len = v[i]['seq_len']
             max_seq_len_i = i
-        # max_seq_len = max(max_seq_len,v[i]['seq_len'])
         max_lex_num = max(max_lex_num,v[i]['lex_num'])
         max_seq_lex = max(max_seq_lex,v[i]['lex_num']+v[i]['seq_len'])
 
@@ -319,7 +311,6 @@ for k,v in datasets.items():
     print('{} max_seq_lex:{}'.format(k, max_seq_lex))
 
 
-# max_seq_len = max(max(datasets['train']['seq_len']),max(datasets['dev']['seq_len']),max(datasets['test']['seq_len']))
 import copy
 max_seq_len = max(* map(lambda x:max(x['seq_len']),datasets.values()))
 
@@ -340,21 +331,17 @@ for k, v in datasets.items():
     if args.lattice:
         v.set_input('lex_num','pos_s','pos_e')
         v.set_pad_val('lattice',vocabs['lattice'].padding_idx)
-        # if args.status =='test':
         if not k=='aicup_dev':
             v.set_target('target','seq_len')
             v.set_input('lattice','bigrams','seq_len','target')
         else:
             v.set_input('lattice','bigrams','seq_len',)
     else:
-        # v.set_input('chars','bigrams','seq_len','target')
-        # if args.status =='test':
         if not k=='aicup_dev':
             v.set_target('target', 'seq_len')
             v.set_input('chars','bigrams','seq_len')
         else:
             v.set_input('chars','bigrams','seq_len','target')
-
 
 
 from utils import norm_static_embedding
@@ -372,14 +359,6 @@ if args.norm_lattice_embed>0:
         norm_static_embedding(v,args.norm_embed)
 
 
-# if args.norm_gaz_embed>0:
-#     print('embedding:{}'.format(embeddings['char'].embedding.weight.size()))
-#     print('norm embedding')
-#     for k,v in embeddings.items():
-#         norm_static_embedding(v,args.norm_embed)
-
-# print(embeddings['char'].embedding.weight[:10])
-# exit(1208)
 mode = {}
 mode['debug'] = args.debug
 mode['gpumm'] = args.gpumm
@@ -399,15 +378,18 @@ torch.backends.cudnn.benchmark = False
 fitlog.set_rng_seed(args.seed)
 torch.backends.cudnn.benchmark = False
 
-
 fitlog.add_hyper(args)
-
 
 if args.model == 'transformer':
     if args.lattice:
         if args.use_bert:
-            bert_embedding = BertEmbedding(vocabs['lattice'],model_dir_or_name='cn-wwm',requires_grad=False,
-                                           word_dropout=0.01)
+            bert_embedding = BertEmbedding(
+                vocabs['lattice'],
+                model_dir_or_name='cn-wwm',
+                requires_grad=True,
+                word_dropout=0.01,
+                layers='-3, -1',
+            )
         else:
             bert_embedding = None
         if args.only_bert:
@@ -484,11 +466,7 @@ with torch.no_grad():
     print_info('{}init pram{}'.format('*' * 15, '*' * 15))
 
 loss = LossInForward()
-encoding_type = 'bmeso'
-if args.dataset == 'weibo' or args.dataset == 'aicup':
-    encoding_type = 'bio'
-
-
+encoding_type = 'bio'
 
 f1_metric = SpanFPreRecMetric(
     vocabs['label'],
@@ -616,22 +594,28 @@ if args.status == 'train':
         check_code_level=-1,
         update_every=args.update_every
     )
-    # print(embeddings['word'](66))
     trainer.train()
-    # print(embeddings['word'](66))
+    print('Evaluating...')
     model = Predictor(model)
     pred = model.predict(
         datasets['dev'],
         seq_len_field_name='seq_len',
-    )  
-    print(pred)
-    print(datasets['dev'])  
+    )['pred']
+    pred = [
+        [vocabs['label'].to_word(ele) for ele in arr] for arr in pred
+    ]
+    target = list(datasets['dev']['target'])
+    target = [
+        [vocabs['label'].to_word(ele) for ele in arr] for arr in target
+    ]
+    cls_res = classification_report(target, pred)
+    print(cls_res)
 
 else:
     from fastNLP.core.tester import Tester
 
     
-    mpath = '/home/dy/Flat-Lattice-Transformer/model/fold0/2020-12-17-14-12-48/epoch-19_step-2964_f-0.765985.pt'
+    mpath = '/home/dy/Flat-Lattice-Transformer/model/fold0/2020-12-17-22-45-12/epoch-14_step-3276_f-0.745679.pt'
     print('predicting...')
     model = Predictor(torch.load(mpath, map_location=device))
     pred = model.predict(

@@ -1,4 +1,3 @@
-
 import sys
 sys.path.append('/home/dy/aicup/src')
 from predict import load_dev
@@ -7,6 +6,7 @@ import re
 import pandas as pd
 import re
 import numpy as np
+
 
 def drop_tokens(path):
     data = pd.read_csv(path, sep='\t').to_numpy()
@@ -33,8 +33,9 @@ def drop_tokens(path):
     
     return output
 
+
 def write_res(output):
-    with open('./V1/refine.tsv','w',encoding='utf-8') as f:
+    with open('./V1/refined.tsv','w',encoding='utf-8') as f:
         f.write(output)
     return
 
@@ -64,7 +65,6 @@ def get_pred_output(path):
     return pred_result
 
 
-
 def is_entity_predicted(pred_result, arti_id, position, offset):
     delete_list = []
     for j in range(len(pred_result[str(arti_id)])): # 進到有ID的那格裡面
@@ -74,28 +74,23 @@ def is_entity_predicted(pred_result, arti_id, position, offset):
     pred_result[str(arti_id)] = np.delete(pred_result[str(arti_id)], delete_list, axis=0)
     #print(pred_result[str(arti_id)])
     return pred_result
-# def check_phone():
 
-# def check_email():
 
-# def check_name():
 def write_refined(refined):
     output="article_id\tstart_position\tend_position\tentity_text\tentity_type\n"
     for k in refined.keys():
         for ele in refined[k]:
-            print(ele)
             line = f'{k}\t{ele[0]}\t{ele[1]}\t{ele[2]}\t{ele[3]}\n'
             output+=line
-    with open('./V1/fix_id.tsv','w',encoding='utf-8') as f:
+    with open('./V1/refined.tsv','w',encoding='utf-8') as f:
         f.write(output)
     
     
-
 def refine_output(pred_result):
-    ex = extractor()
+    # ex = extractor()
     origin_text = load_dev(simplify=False)
 
-    # 一條一條的看TEST DATA
+    # 一條一條的看TEST DATA，抓出身分證號碼
     for arti_id in range(len(origin_text)):
         pattern = re.compile("[A-Z]{1}[1-2]{1}[0-9]{8}", re.I) 
         id_match = pattern.findall(origin_text[arti_id])
@@ -105,6 +100,51 @@ def refine_output(pred_result):
             pred_result = is_entity_predicted(pred_result, arti_id, position, 9)
             arr = np.array([position, position+10, id_match[i], 'ID'])
             pred_result[str(arti_id)] = np.append(pred_result[str(arti_id)], arr).reshape(-1,4)
+
+    # 一條一條的看TEST DATA，抓出手機號碼
+    for arti_id in range(len(origin_text)):
+        pattern = re.compile("09[0-9]{8}", re.I)
+        phone_match = pattern.findall(origin_text[arti_id])
+        for i in range(len(phone_match)):
+            position = origin_text[arti_id].find(phone_match[i])
+
+            pred_result = is_entity_predicted(pred_result, arti_id, position, 9)
+            arr = np.array([position, position+10, phone_match[i], 'contact'])
+            pred_result[str(arti_id)] = np.append(pred_result[str(arti_id)], arr).reshape(-1,4)
+
+    # 一條一條的看TEST DATA，抓出google
+    for arti_id in range(len(origin_text)):
+        pattern = re.compile("google", re.I)
+        google_match = pattern.findall(origin_text[arti_id])
+        for i in range(len(google_match)):
+            position = origin_text[arti_id].find(google_match[i])
+
+            pred_result = is_entity_predicted(pred_result, arti_id, position, 5)
+            arr = np.array([position, position+6, google_match[i], 'profession'])
+            pred_result[str(arti_id)] = np.append(pred_result[str(arti_id)], arr).reshape(-1,4)
+    
+    # 一條一條的看TEST DATA，抓出line
+    for arti_id in range(len(origin_text)):
+        pattern = re.compile("line", re.I)
+        line_match = pattern.findall(origin_text[arti_id])
+        for i in range(len(line_match)):
+            position = origin_text[arti_id].find(line_match[i])
+
+            pred_result = is_entity_predicted(pred_result, arti_id, position, 3)
+            arr = np.array([position, position+4, line_match[i], 'contact'])
+            pred_result[str(arti_id)] = np.append(pred_result[str(arti_id)], arr).reshape(-1,4)
+    
+    # 一條一條的看TEST DATA，抓出cd4
+    for arti_id in range(len(origin_text)):
+        pattern = re.compile("cd4", re.I)
+        cd4_match = pattern.findall(origin_text[arti_id])
+        for i in range(len(cd4_match)):
+            position = origin_text[arti_id].find(cd4_match[i])
+
+            pred_result = is_entity_predicted(pred_result, arti_id, position, 2)
+            # arr = np.array([position, position+6, cd4_match[i], 'contact'])
+            #pred_result[str(arti_id)] = np.append(pred_result[str(arti_id)], arr).reshape(-1,4)
+    
     return pred_result    
 
                 
@@ -132,6 +172,7 @@ def refine_output(pred_result):
         # if locations:
         #     print(locations)
 
+
 if __name__ == "__main__":
     # 先將錯誤的符號去除, 寫在refine.tsv中
     path = './V1/output.tsv'
@@ -139,7 +180,7 @@ if __name__ == "__main__":
     write_res(output)
 
     # 生成dict {artical id:[[ ],[ ],[ ]]}
-    path = './V1/refine.tsv'
+    path = './V1/refined.tsv'
     pred_res = get_pred_output(path) 
 
     # 用RULES抓取一些東西
