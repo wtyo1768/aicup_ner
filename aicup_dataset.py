@@ -14,10 +14,9 @@ import jieba.posseg as pseg
 
 def get_label_vocab():
     label_vocab = Vocabulary()
-    label = list( 
-        all_type - {'others', 'organization', 'clinical_event' }
-    )
+    label = ['money', 'education', 'name', 'time', 'family', 'med_exam', 'contact', 'location', 'ID', 'profession']
     total_label = []
+    print(label)
     for prefix in 'BI':
         total_label.extend([prefix+'-' + ele for ele in label])
     total_label.extend(['<unk>', '<pad>', 'O' ])
@@ -143,7 +142,9 @@ def get_pos_tag(sen):
     
 
 if __name__ == "__main__":
-    
+    label_vocab = get_label_vocab()
+    print(label_vocab)
+    print(list(label_vocab))
     pass
     # ds, vocabs, embeddings = load_aicup_ner(
     #     aicup_ner_path,

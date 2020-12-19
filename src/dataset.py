@@ -7,7 +7,7 @@ import torch
 import sys
 import opencc
 
-fpath = '/home/dy/flat-chinese-ner/data/train_2.txt'
+fpath = '/home/dy/Flat-Lattice-Transformer/data/train_2.txt'
 USE_ALL_DATA_FOR_TRAIN = False
 max_len=128
 tagging_method = 'BI'
@@ -360,7 +360,7 @@ def generate_type_id(doc, offset_map):
     return type_id
 
 
-def get_label(path='/home/dy/flat-chinese-ner/data/train_2.txt'):
+def get_label(path='/home/dy/Flat-Lattice-Transformer/data/train_2.txt'):
     labels = list()
     with open(path, 'r', encoding='utf8') as f:
         file_text=f.read().encode('utf-8').decode('utf-8-sig')

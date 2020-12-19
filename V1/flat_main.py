@@ -626,11 +626,11 @@ elif args.status == 'bagging':
     from voting import vote
 
     models_path = [
-        '/home/dy/flat-chinese-ner/model/fold0/2020-12-19-10-22-01/epoch-19_step-2964_f-0.756652.pt',
-        '/home/dy/flat-chinese-ner/model/fold1/2020-12-19-10-02-29/epoch-15_step-2355_f-0.738956.pt',
-        '/home/dy/flat-chinese-ner/model/fold2/2020-12-19-10-40-06/epoch-20_step-3140_f-0.730933.pt',
-        '/home/dy/flat-chinese-ner/model/fold3/2020-12-19-10-58-24/epoch-17_step-2669_f-0.794857.pt',
-        '/home/dy/flat-chinese-ner/model/fold4/2020-12-19-11-22-20/epoch-18_step-2844_f-0.758940.pt',
+        '/home/dy/Flat-Lattice-Transformer/model/fold0/2020-12-19-10-22-01/epoch-19_step-2964_f-0.756652.pt',
+        '/home/dy/Flat-Lattice-Transformer/model/fold1/2020-12-19-10-02-29/epoch-15_step-2355_f-0.738956.pt',
+        '/home/dy/Flat-Lattice-Transformer/model/fold2/2020-12-19-10-40-06/epoch-20_step-3140_f-0.730933.pt',
+        '/home/dy/Flat-Lattice-Transformer/model/fold3/2020-12-19-10-58-24/epoch-17_step-2669_f-0.794857.pt',
+        '/home/dy/Flat-Lattice-Transformer/model/fold4/2020-12-19-11-22-20/epoch-18_step-2844_f-0.758940.pt',
     ]
     for p in models_path:
         assert(os.path.isfile(p))
@@ -682,11 +682,11 @@ elif args.status == 'bagging':
 
 else:
     models_path = [
-        '/home/dy/flat-chinese-ner/model/fold0/2020-12-19-12-44-25/epoch-20_step-3120_f-0.764858.pt',
-        '/home/dy/flat-chinese-ner/model/fold1/2020-12-19-13-01-24/epoch-17_step-2669_f-0.735084.pt',
-        '/home/dy/flat-chinese-ner/model/fold2/2020-12-19-13-18-18/epoch-13_step-2041_f-0.716099.pt',
-        '/home/dy/flat-chinese-ner/model/fold3/2020-12-19-13-35-11/epoch-20_step-3140_f-0.781411.pt',
-        '/home/dy/flat-chinese-ner/model/fold4/2020-12-19-14-06-35/epoch-18_step-2844_f-0.742254.pt',
+        '/home/dy/Flat-Lattice-Transformer/model/fold0/2020-12-19-12-44-25/epoch-20_step-3120_f-0.764858.pt',
+        '/home/dy/Flat-Lattice-Transformer/model/fold1/2020-12-19-13-01-24/epoch-17_step-2669_f-0.735084.pt',
+        '/home/dy/Flat-Lattice-Transformer/model/fold2/2020-12-19-13-18-18/epoch-13_step-2041_f-0.716099.pt',
+        '/home/dy/Flat-Lattice-Transformer/model/fold3/2020-12-19-13-35-11/epoch-20_step-3140_f-0.781411.pt',
+        '/home/dy/Flat-Lattice-Transformer/model/fold4/2020-12-19-14-06-35/epoch-18_step-2844_f-0.742254.pt',
     ]
     mpath = models_path[args.fold]
     print('predicting...')
