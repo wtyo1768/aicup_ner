@@ -321,7 +321,7 @@ import copy
 max_seq_len = max(* map(lambda x:max(x['seq_len']),datasets.values()))
 
 
-if args.status=='train':
+if not args.do_pred:
     show_index = 4
     print('raw_chars:{}'.format(list(datasets['train'][show_index]['raw_chars'])))
     print('lexicons:{}'.format(list(datasets['train'][show_index]['lexicons'])))
@@ -454,7 +454,7 @@ elif args.model =='lstm':
                           embed_dropout=args.embed_dropout,output_dropout=args.output_dropout,use_bigram=True,
                           debug=args.debug)
 
-if args.status == 'train':
+if not args.do_pred:
     for n,p in model.named_parameters():
         print('{}:{}'.format(n,p.size()))
 
@@ -604,21 +604,18 @@ if args.status == 'train':
             datasets['dev'],
             seq_len_field_name='seq_len',
         )['pred']
-    pred = [
-        [vocabs['label'].to_word(ele) for ele in arr] for arr in pred
-    ]
+    pred = [[vocabs['label'].to_word(ele) for ele in arr] for arr in pred]
     target = list(datasets['dev']['target'])
-    target = [
-        [vocabs['label'].to_word(ele) for ele in arr] for arr in target
-    ]
+    target = [[vocabs['label'].to_word(ele) for ele in arr] for arr in target]
     cls_res = classification_report(target, pred)
     print(cls_res)
+
+    # Prediction to aicup data
     if args.do_pred:
         print('predicting...')
         pred = model.predict(
             datasets['aicup_dev'],
-            seq_len_field_name='seq_len',
-        )['pred']
+            seq_len_field_name='seq_len',)['pred']
         convert_pred_and_write(
             pred, 
             f'./pred/pred{args.fold}.npy', 
