@@ -6,7 +6,7 @@ from fastNLP import DataSet
 from utils import get_bigrams
 import os
 import sys
-from src.dataset import romove_redundant_str, split_to_sentence, cut_words, get_fastnlp_ds
+from src.dataset import romove_redundant_str, split_to_sentence
 from src.predict import load_dev
 from paths import *
 import jieba

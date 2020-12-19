@@ -1,5 +1,5 @@
 from sklearn.model_selection import KFold, ShuffleSplit
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List
 from nlpcda import Ner
 import numpy as np
 import torch
@@ -382,6 +382,19 @@ def get_label(path='/home/dy/flat-chinese-ner/data/train_2.txt'):
     return tagging_labels
 
 
+def fix_BIOES_tag(fix_tag):
+    for i in range(len(fix_tag)):
+        for j in range(len(fix_tag[i])):
+            if fix_tag[i][j][0] == 'B':
+                # single
+                if fix_tag[i][j+1][0] == 'O':
+                    fix_tag[i][j] = 'S' + fix_tag[i][j][1:]
+            elif fix_tag[i][j][0] == 'I':
+                if fix_tag[i][j+1][0] == 'O':
+                    fix_tag[i][j] = 'E' + fix_tag[i][j][1:]
+    return fix_tag
+
+
 def write_ds(outfile, texts, tags, split_sen=True):
     out = ''
     for a_id, doc in enumerate(texts):
@@ -396,30 +409,6 @@ def write_ds(outfile, texts, tags, split_sen=True):
     
     with open(outfile, 'w+' ,encoding='utf-8') as f:
         f.write(out)
-
-
-def get_fastnlp_ds(mode, cv=False,):
-
-    trainingset, position, _ = loadInputFile(fpath, mode=mode)
-
-    texts, tags, input_id_types = preprocess_input(trainingset, position)
-
-    texts, tags, type_tensor = split_to_sentence(texts, input_id_types, max_len, tags)
-
-    if cv:
-        train_texts, val_texts, train_tags, val_tags  = val_split(texts, tags, type_tensor, cv)
-        
-        train_texts, train_input_id_types = zip(*train_texts)
-        val_texts, val_input_id_types = zip(*val_texts)
-        return train_texts, train_tags, val_texts, val_tags
-
-    else:
-        train_texts, train_tags, val_texts, val_tags, test_texts, test_tags = val_split(texts, tags, type_tensor, cv)
-        train_texts, train_input_id_types = zip(*train_texts)
-        val_texts, val_input_id_types = zip(*val_texts)
-        test_texts, test_input_id_types = zip(*test_texts)
-
-    return train_texts, train_tags, val_texts, val_tags, test_texts, test_tags
 
 
 tag2id = {tag: id for id, tag in enumerate(get_label())}
@@ -468,19 +457,6 @@ def augment(prefix, fold ,aug_type=[], augument_size=3):
     return aug_texts, aug_tags
 
 
-def fix_BIOES_tag(fix_tag):
-    for i in range(len(fix_tag)):
-        for j in range(len(fix_tag[i])):
-            if fix_tag[i][j][0] == 'B':
-                # single
-                if fix_tag[i][j+1][0] == 'O':
-                    fix_tag[i][j] = 'S' + fix_tag[i][j][1:]
-            elif fix_tag[i][j][0] == 'I':
-                if fix_tag[i][j+1][0] == 'O':
-                    fix_tag[i][j] = 'E' + fix_tag[i][j][1:]
-    return fix_tag
-
-
 HANDLE = 'minority'
 model_type = {
     'minority' : [
@@ -496,7 +472,7 @@ model_type = {
         'name', 'profession', 
     ],
 }
-aug_size = 3
+aug_size = 0
 
 if __name__ == "__main__":
     '''
@@ -540,11 +516,17 @@ if __name__ == "__main__":
         filtered_texts, filtered_tags = filter_Otexts(orgin_train, orgin_tags, aug_type)
 
         prefix = f'./data/fold{idx}/'
-        write_ds(f'{prefix}filtered/origin', orgin_train, orgin_tags, split_sen=False)
+        # write_ds(f'{prefix}filtered/origin', orgin_train, orgin_tags, split_sen=False)
         write_ds(f'{prefix}filtered/raw', filtered_texts, filtered_tags, split_sen=False)
+        
+        if aug_size==0:
+            write_ds(f'{prefix}/train/train', orgin_train, orgin_tags)
+            write_ds(f'{prefix}dev/dev', dev_text, dev_tags)
+            continue
+        
         aug_texts, aug_tags = augment(prefix, idx, aug_type=aug_type, augument_size=aug_size)
         write_ds(f'{prefix}dev/dev', dev_text, dev_tags)
-
+        
 
         aug_sen, sen_tags, _ = split_to_sentence(aug_texts, None, max_len, aug_tags)
         aug_sen, sen_tags = filter_Otexts(aug_sen, sen_tags, list(all_type))
