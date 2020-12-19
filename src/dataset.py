@@ -1,4 +1,5 @@
 from sklearn.model_selection import KFold, ShuffleSplit
+from sklearn.utils import shuffle
 from typing import Dict, List
 from nlpcda import Ner
 import numpy as np
@@ -229,7 +230,7 @@ def cut_words(texts:List[str]) -> List[List[str]]:
 
 def val_split(texts, tags, input_id_types, cv=False):
     from sklearn.model_selection import train_test_split
-    from sklearn.utils import shuffle
+    
 
     SPLIT = 0.5
     #  this block is use for upload dev data to ai-cup platform 
@@ -472,7 +473,7 @@ model_type = {
         'name', 'profession', 
     ],
 }
-aug_size = 0
+aug_size = 3
 
 if __name__ == "__main__":
     '''
@@ -541,7 +542,7 @@ if __name__ == "__main__":
 
         orgin_train += aug_sen
         orgin_tags += sen_tags
-
+        orgin_train, orgin_tags = zip(*shuffle(list(zip(orgin_train, orgin_tags))))
         write_ds(f'{prefix}/train/train', orgin_train, orgin_tags)
         print('After augmentation', len(orgin_train))
 
