@@ -10,22 +10,23 @@ python3 flat_main.py \
     --use_bigram 0 \
     --layer 1 \
     --use_bert 1 \
-    --only_bert 0 \
-    --weight_decay 0.03 \
-    --after_bert 'mlp' \
-    --warmup 0.1 \
+    --lattice 1 \
+    --only_bert 1 \
+    --weight_decay 0.01 \
+    --after_bert 'lstm' \
+    --warmup 0.3 \
     --optim 'adam' \
     --fix_bert_epoch 0 \
-    --epoch 1 \
+    --epoch 5 \
     --batch 16 \
     --status 'train' \
     --lexicon_name 'lk' \
     --bigram_min_freq 1 \
-    --embed_lr_rate 1 \
+    --embed_lr_rate 1.3 \
     --fold 3 \
     --use_abs_pos false \
     --use_rel_pos true \
-    --do_pred 1
+    --do_pred 0
 
 # bagging with no bigram
 # TODO 等價字替換 nlpcda

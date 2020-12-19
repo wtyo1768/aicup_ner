@@ -507,24 +507,32 @@ class Lattice_Transformer_SeqLabel(nn.Module):
 
 
 class BERT_SeqLabel(nn.Module):
-    def __init__(self,bert_embedding,label_size,vocabs,after_bert):
+    def __init__(self,bert_embedding,label_size,vocabs,after_bert, use_pos_tag=True):
         super().__init__()
         self.after_bert = after_bert
         self.bert_embedding = bert_embedding
         self.label_size = label_size
         self.vocabs = vocabs
         self.hidden_size = bert_embedding._embed_size
-        self.pos_embed_szie = len(list(vocabs['pos_tag']))
-        self.pos_embedding = nn.Embedding(self.pos_embed_szie, 20)
+
+        self.pos_embed_size = len(list(vocabs['pos_tag']))
+        self.pos_feats_size = 20
+        
+        self.pos_embedding = nn.Embedding(self.pos_embed_size, self.pos_feats_size)
+        if self.after_bert == 'lstm':
+            self.lstm = LSTM(
+                bert_embedding._embed_size+self.pos_feats_size,
+                (bert_embedding._embed_size+self.pos_feats_size)//2,
+                bidirectional=True,
+                num_layers=2,
+            )
         self.output = nn.Linear(
-            self.hidden_size+20,
+            self.hidden_size+self.pos_feats_size,
             self.label_size
         )
         self.crf = get_crf_zero_init(self.label_size)
-        if self.after_bert == 'lstm':
-            self.lstm = LSTM(bert_embedding._embed_size+self.pos_embed_szie,bert_embedding._embed_size//2,
-                             bidirectional=True)
-        self.dropout = MyDropout(0.5)
+        
+        self.dropout = MyDropout(0.2)
 
     def forward(self, lattice, bigrams, seq_len, lex_num, pos_s, pos_e, pos_tag,
                 target, chars_target=None):
@@ -538,10 +546,15 @@ class BERT_SeqLabel(nn.Module):
         
         encoded = self.bert_embedding(words)
         pos_embed = self.pos_embedding(pos_tag)
+        # print('bert',encoded.shape)
+        # print('pos_embed',pos_embed.shape)
+
         encoded = torch.cat([encoded, pos_embed],dim=-1)
+        # print('concated',encoded.shape)
 
         if self.after_bert == 'lstm':
-            encoded,_ = self.lstm(encoded,seq_len)
+            encoded, _ = self.lstm(encoded, seq_len)
+            # print('lstm',encoded.shape)
             encoded = self.dropout(encoded)
         
         pred = self.output(encoded)

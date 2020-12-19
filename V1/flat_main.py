@@ -346,9 +346,9 @@ for k, v in datasets.items():
     else:
         if not k=='aicup_dev':
             v.set_target('target', 'seq_len')
-            v.set_input('chars','bigrams','seq_len')
-        else:
             v.set_input('chars','bigrams','seq_len','target')
+        else:
+            v.set_input('chars','bigrams','seq_len')
     v.set_input('pos_tag')
 
 
@@ -526,9 +526,16 @@ if not args.only_bert:
         param_ = [{'params': non_embedding_param}, {'params': embedding_param, 'lr': args.lr * args.embed_lr_rate},
                   {'params':bert_embedding_param,'lr':args.bert_lr_rate*args.lr}]
 else:
-    non_embedding_param = model.parameters()
-    embedding_param = []
-    param_ = [{'params': non_embedding_param}, {'params': embedding_param, 'lr': args.lr * args.embed_lr_rate}]
+    bert_embedding_param = list(model.bert_embedding.parameters())
+    bert_embedding_param_ids = list(map(id,bert_embedding_param))
+    embedding_param = list(model.pos_embedding.parameters())
+    embedding_param_ids = list(map(id,embedding_param))
+    non_embedding_param = list(filter(
+    lambda x:id(x) not in embedding_param_ids and id(x) not in bert_embedding_param_ids,
+        model.parameters()))
+    param_ = [
+        {'params': non_embedding_param},
+        {'params':bert_embedding_param,'lr':args.bert_lr_rate*args.lr}]
 
 
 

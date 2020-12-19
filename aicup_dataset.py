@@ -19,7 +19,7 @@ def get_label_vocab():
     print(label)
     for prefix in 'BI':
         total_label.extend([prefix+'-' + ele for ele in label])
-    total_label.extend(['<unk>', '<pad>', 'O' ])
+    total_label.append('O')
 
     label_vocab.add_word_lst(total_label) 
     return label_vocab

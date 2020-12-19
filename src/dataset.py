@@ -473,7 +473,7 @@ model_type = {
         'name', 'profession', 
     ],
 }
-aug_size = 3
+aug_size = 2
 
 if __name__ == "__main__":
     '''
