@@ -6,12 +6,24 @@ from fastNLP import DataSet
 from utils import get_bigrams
 import os
 import sys
-from src.dataset import romove_redundant_str, split_to_sentence
+from src.dataset import romove_redundant_str, split_to_sentence, all_type
 from src.predict import load_dev
 from paths import *
 import jieba
 import jieba.posseg as pseg
 
+def get_label_vocab():
+    label_vocab = Vocabulary()
+    label = list( 
+        all_type - {'others', 'organization', 'clinical_event' }
+    )
+    total_label = []
+    for prefix in 'BI':
+        total_label.extend([prefix+'-' + ele for ele in label])
+    total_label.extend(['<unk>', '<pad>', 'O' ])
+
+    label_vocab.add_word_lst(total_label) 
+    return label_vocab
 
 @cache_results(_cache_fp='cache/aicupNER_uni+bi', _refresh=True)
 def load_aicup_ner(
@@ -54,10 +66,9 @@ def load_aicup_ner(
 
     char_vocab = Vocabulary()
     bigram_vocab = Vocabulary()
-    label_vocab = Vocabulary()
     pos_vocab = Vocabulary()
 
-    label_vocab.from_dataset(ds['train'], field_name='target')
+    label_vocab = get_label_vocab()
     pos_vocab.from_dataset(*list(ds.values()), field_name='pos_tag')
 
     if cv: no_create_entry_ds = [ds['dev'], ds['aicup_dev']]
@@ -132,27 +143,23 @@ def get_pos_tag(sen):
     
 
 if __name__ == "__main__":
-    # raw_data = load_dev()
     
-    # offset_mapping = []
-    # for idx in range(len(raw_data)):
-    #     raw_data[idx], offset_map = romove_redundant_str(raw_data[idx], dev_mode=True)
-    #     offset_mapping.append(offset_map)
-
-    # split_docs, type_tensor = split_to_sentence(raw_data, None, 128)
-    # docs_pos_tag = get_pos_tag(split_docs)
-    # # print(split_docs[0])
+    pass
+    # ds, vocabs, embeddings = load_aicup_ner(
+    #     aicup_ner_path,
+    #     yangjie_rich_pretrain_unigram_path,
+    #     yangjie_rich_pretrain_bigram_path,
+    #     index_token=False,
+    #     char_min_freq=1,
+    #     bigram_min_freq=1,
+    #     only_train_min_freq=True,
+    #     char_word_dropout=0.01,
+    #     cv=True,
+    #     model_type='many',
+    #     fold=0,
+    # )
+    # print(vocabs['label'])
     
-    # exit()
-    train_path = os.path.join(aicup_ner_path, 'fold0', 'train/train')
-    loader = ConllLoader(['chars', 'target'])
-
-    train = loader.load(train_path)
- 
-    ds = train.datasets['train']
-    ds.apply_field(get_pos_tag, 'chars', 'pos_tag')
-
-    print(ds)
     # load_aicup_ner(
     #     aicup_ner_path,
     #     yangjie_rich_pretrain_unigram_path,

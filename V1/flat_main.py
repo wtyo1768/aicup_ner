@@ -8,6 +8,10 @@ fitlog.add_hyper(load_dataset_seed,'load_dataset_seed')
 fitlog.set_rng_seed(load_dataset_seed)
 import sys
 sys.path.append('../')
+
+from src.dataset  import romove_redundant_str
+from src.predict import load_dev, split_to_pred_per_article, write_result
+from src.predict import convert_pred_and_write, count_article_length
 from load_data import *
 import argparse
 from paths import *
@@ -47,7 +51,7 @@ parser.add_argument('--cv',type=bool,default=False)
 parser.add_argument('--model_type',type=str,default='few')
 parser.add_argument('--fold',type=int,default=0)
 parser.add_argument('--use_pos_tag', type=int, default=0, required=True)
-
+parser.add_argument('--do_pred', type=int, default=0)
 parser.add_argument('--update_every',type=int,default=1)
 parser.add_argument('--status',choices=['train','test', 'bagging'],default='train')
 parser.add_argument('--use_bert',type=int,default=1)
@@ -316,6 +320,7 @@ for k,v in datasets.items():
 import copy
 max_seq_len = max(* map(lambda x:max(x['seq_len']),datasets.values()))
 
+
 if args.status=='train':
     show_index = 4
     print('raw_chars:{}'.format(list(datasets['train'][show_index]['raw_chars'])))
@@ -449,25 +454,26 @@ elif args.model =='lstm':
                           embed_dropout=args.embed_dropout,output_dropout=args.output_dropout,use_bigram=True,
                           debug=args.debug)
 
-for n,p in model.named_parameters():
-    print('{}:{}'.format(n,p.size()))
-
-with torch.no_grad():
-    print_info('{}init pram{}'.format('*'*15,'*'*15))
+if args.status == 'train':
     for n,p in model.named_parameters():
-        if 'bert' not in n and 'embedding' not in n and 'pos' not in n and 'pe' not in n \
-                and 'bias' not in n and 'crf' not in n and p.dim()>1:
-            try:
-                if args.init == 'uniform':
-                    nn.init.xavier_uniform_(p)
-                    print_info('xavier uniform init:{}'.format(n))
-                elif args.init == 'norm':
-                    print_info('xavier norm init:{}'.format(n))
-                    nn.init.xavier_normal_(p)
-            except:
-                print_info(n)
-                exit(1208)
-    print_info('{}init pram{}'.format('*' * 15, '*' * 15))
+        print('{}:{}'.format(n,p.size()))
+
+    with torch.no_grad():
+        print_info('{}init pram{}'.format('*'*15,'*'*15))
+        for n,p in model.named_parameters():
+            if 'bert' not in n and 'embedding' not in n and 'pos' not in n and 'pe' not in n \
+                    and 'bias' not in n and 'crf' not in n and p.dim()>1:
+                try:
+                    if args.init == 'uniform':
+                        nn.init.xavier_uniform_(p)
+                        print_info('xavier uniform init:{}'.format(n))
+                    elif args.init == 'norm':
+                        print_info('xavier norm init:{}'.format(n))
+                        nn.init.xavier_normal_(p)
+                except:
+                    print_info(n)
+                    exit(1208)
+        print_info('{}init pram{}'.format('*' * 15, '*' * 15))
 
 loss = LossInForward()
 encoding_type = 'bio'
@@ -592,11 +598,12 @@ if args.status == 'train':
     )
     trainer.train()
     print('Evaluating...')
-    model = Predictor(model)
-    pred = model.predict(
-        datasets['dev'],
-        seq_len_field_name='seq_len',
-    )['pred']
+    with torch.no_grad():
+        model = Predictor(model)
+        pred = model.predict(
+            datasets['dev'],
+            seq_len_field_name='seq_len',
+        )['pred']
     pred = [
         [vocabs['label'].to_word(ele) for ele in arr] for arr in pred
     ]
@@ -606,16 +613,27 @@ if args.status == 'train':
     ]
     cls_res = classification_report(target, pred)
     print(cls_res)
+    if args.do_pred:
+        print('predicting...')
+        pred = model.predict(
+            datasets['aicup_dev'],
+            seq_len_field_name='seq_len',
+        )['pred']
+        convert_pred_and_write(
+            pred, 
+            f'./pred/pred{args.fold}.npy', 
+            vocabs['label']
+        )
 
 elif args.status == 'bagging':
     from voting import vote
-    from src.dataset  import romove_redundant_str
-    from src.predict import load_dev, split_to_pred_per_article, write_result, count_article_length
 
     models_path = [
-        '/home/dy/flat-chinese-ner/model/fold0/2020-12-19-03-47-37/epoch-47_step-7332_f-0.791180.pt',
-        '/home/dy/flat-chinese-ner/model/fold0/2020-12-19-03-47-37/epoch-47_step-7332_f-0.791180.pt',
-        '/home/dy/flat-chinese-ner/model/fold0/2020-12-19-03-47-37/epoch-47_step-7332_f-0.791180.pt',
+        '/home/dy/flat-chinese-ner/model/fold0/2020-12-19-10-22-01/epoch-19_step-2964_f-0.756652.pt',
+        '/home/dy/flat-chinese-ner/model/fold1/2020-12-19-10-02-29/epoch-15_step-2355_f-0.738956.pt',
+        '/home/dy/flat-chinese-ner/model/fold2/2020-12-19-10-40-06/epoch-20_step-3140_f-0.730933.pt',
+        '/home/dy/flat-chinese-ner/model/fold3/2020-12-19-10-58-24/epoch-17_step-2669_f-0.794857.pt',
+        '/home/dy/flat-chinese-ner/model/fold4/2020-12-19-11-22-20/epoch-18_step-2844_f-0.758940.pt',
     ]
     for p in models_path:
         assert(os.path.isfile(p))
@@ -638,7 +656,6 @@ elif args.status == 'bagging':
             )['pred']
             # flatten 
             pred = [int(ele) for sublist in pred for ele in sublist]
-
             with open(f'./pred/pred{path_num}.npy', 'wb') as f:
                 print(f'writing pred{path_num}.npy...')    
                 np.save(f, np.array(pred))
@@ -667,8 +684,14 @@ elif args.status == 'bagging':
     )
 
 else:
-    mpath = '/home/dy/flat-chinese-ner/model/fold0/2020-12-19-03-47-37/epoch-47_step-7332_f-0.791180.pt'
-
+    models_path = [
+        '/home/dy/flat-chinese-ner/model/fold0/2020-12-19-12-44-25/epoch-20_step-3120_f-0.764858.pt',
+        '/home/dy/flat-chinese-ner/model/fold1/2020-12-19-13-01-24/epoch-17_step-2669_f-0.735084.pt',
+        '/home/dy/flat-chinese-ner/model/fold2/2020-12-19-13-18-18/epoch-13_step-2041_f-0.716099.pt',
+        '/home/dy/flat-chinese-ner/model/fold3/2020-12-19-13-35-11/epoch-20_step-3140_f-0.781411.pt',
+        '/home/dy/flat-chinese-ner/model/fold4/2020-12-19-14-06-35/epoch-18_step-2844_f-0.742254.pt',
+    ]
+    mpath = models_path[args.fold]
     print('predicting...')
     model = Predictor(torch.load(mpath, map_location=device))
     pred = model.predict(
@@ -676,8 +699,11 @@ else:
         seq_len_field_name='seq_len',
     )    
     pred = pred['pred']
-    from src.dataset  import romove_redundant_str
-    from src.predict import load_dev, split_to_pred_per_article, write_result, count_article_length
+    pred = [int(ele) for sublist in pred for ele in sublist]
+
+    with open(f'./pred/pred{args.fold}.npy', 'wb') as f:
+        print(f'writing pred{args.fold}.npy...')    
+        np.save(f, np.array(pred))
     
     dev_data = load_dev()
     origin_data = load_dev(simplify=False)
@@ -687,7 +713,7 @@ else:
         dev_data[idx], map_arr = romove_redundant_str(dev_data[idx], dev_mode=True)
         offset_map.append(map_arr)
 
-    pred = [vocabs['label'].to_word(ele) for arr in pred for ele in arr]
+    pred = [vocabs['label'].to_word(ele) for ele in pred]
     pred_per_article = split_to_pred_per_article([pred], count_article_length(dev_data))
     print('writing file...')
     write_result(dev_data, pred_per_article, offset_map, origin_data)

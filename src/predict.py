@@ -130,6 +130,25 @@ def pred_and_write(model, model_type):
     write_result(dev_data, pred_per_article, offset_mapping, origin_data)
 
 
+def convert_pred_and_write(pred, out_path, vocabs):
+    pred = [int(ele) for sublist in pred for ele in sublist]
+    dev_data = load_dev()
+    origin_data = load_dev(simplify=False)
+
+    offset_map = []
+    for idx in range(len(dev_data)):
+        dev_data[idx], map_arr = romove_redundant_str(dev_data[idx], dev_mode=True)
+        offset_map.append(map_arr)
+
+    pred = [vocabs['label'].to_word(ele) for ele in pred]
+    pred_per_article = split_to_pred_per_article([pred], count_article_length(dev_data))
+    
+    with open(out_path, 'wb') as f:
+        print(f'writing {out_path}...')    
+        np.save(f, np.array(pred))
+
+    
+
 
 if __name__ == "__main__":
 

@@ -7,7 +7,7 @@ python3 flat_main.py \
     --cv true \
     --use_pos_tag 0 \
     --model_type 'many' \
-    --use_bigram 1 \
+    --use_bigram 0 \
     --layer 1 \
     --use_bert 1 \
     --only_bert 0 \
@@ -18,12 +18,13 @@ python3 flat_main.py \
     --fix_bert_epoch 0 \
     --epoch 20 \
     --batch 16 \
-    --status 'train' \
+    --status 'test' \
     --lexicon_name 'lk' \
     --bigram_min_freq 1 \
     --embed_lr_rate 1 \
-    --fold 1 \
+    --fold 3 \
     --use_abs_pos false \
     --use_rel_pos true \
-    
+
+# bagging with no bigram
 # TODO 等價字替換 nlpcda
