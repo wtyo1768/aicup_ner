@@ -26,7 +26,6 @@ def load_aicup_ner(
     char_min_freq=1,
     cv=False,
     fold=0,
-    use_pos_tag=False
     ):
     vocabs = {}
     embeddings = {}
@@ -48,8 +47,7 @@ def load_aicup_ner(
     for ds_name in ds.keys():
         ds[ds_name].apply_field(get_bigrams, 'chars', 'bigrams')
         ds[ds_name].add_seq_len('chars', new_field_name='seq_len')
-        if use_pos_tag:
-            ds[ds_name].apply_field(get_pos_tag, 'chars', 'pos_tag')
+        ds[ds_name].apply_field(get_pos_tag, 'chars', 'pos_tag')
 
     for k, v in ds.items():
         print('{}:{}'.format(k, len(v)))

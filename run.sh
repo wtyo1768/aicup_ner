@@ -5,6 +5,7 @@ python3 flat_main.py \
     --dataset 'aicup' \
     --number_normalized 3 \
     --cv true \
+    --use_pos_tag 0 \
     --model_type 'many' \
     --use_bigram 1 \
     --layer 1 \
@@ -24,4 +25,4 @@ python3 flat_main.py \
     --fold 1 \
     --use_abs_pos false \
     --use_rel_pos true \
-    --use_pos_tag true 
+    

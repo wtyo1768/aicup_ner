@@ -433,7 +433,6 @@ class Lattice_Transformer_SeqLabel(nn.Module):
             mask = seq_len_to_mask(seq_len).bool()
             char_for_bert = char_for_bert.masked_fill((~mask),self.vocabs['lattice'].padding_idx)
             bert_embed = self.bert_embedding(char_for_bert)
-            pos_embed = self.pos_embedding(pos_tag)
             bert_embed = torch.cat([bert_embed,
                                     torch.zeros(size=[batch_size,bert_pad_length,bert_embed.size(-1)],
                                                 device = bert_embed.device,

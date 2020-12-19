@@ -46,7 +46,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--cv',type=bool,default=False)
 parser.add_argument('--model_type',type=str,default='few')
 parser.add_argument('--fold',type=int,default=0)
-parser.add_argument('--use_pos_tag', type=bool, default=False)
+parser.add_argument('--use_pos_tag', type=int, default=0, required=True)
 
 parser.add_argument('--update_every',type=int,default=1)
 parser.add_argument('--status',choices=['train','test', 'bagging'],default='train')
@@ -157,6 +157,7 @@ parser.add_argument('--dataset', default='ontonotes', help='weibo|resume|ontonot
 
 
 args = parser.parse_args()
+
 if args.ff_dropout_2 < 0:
     args.ff_dropout_2 = args.ff_dropout
 
@@ -224,7 +225,6 @@ elif args.dataset == 'aicup':
                                                 cv=args.cv,
                                                 model_type=args.model_type,
                                                 fold=args.fold,
-                                                use_pos_tag=args.use_pos_tag
                                             )
 
 if args.gaz_dropout < 0:
