@@ -11,7 +11,7 @@ max_len = 128
 output_path = 'output.tsv'
 
 
-def load_dev(path='/home/dy/Flat-Lattice-Transformer/data/test.txt', simplify=True):
+def load_dev(path='/home/dy/flat-chinese-ner/data/test.txt', simplify=True):
     test_data = []
     with open(path, 'r', encoding='utf8') as f:
         file_text=f.read().encode('utf-8').decode('utf-8-sig')
@@ -68,7 +68,7 @@ def split_to_pred_per_article(pred, articles_wordnum):
     return pred_per_article
 
 
-def write_result(dev_data, pred_per_article, offset_mapping=None, origin_doc=None):
+def write_result(dev_data, pred_per_article, offset_mapping=None, origin_doc=None, output_path=output_path):
     output="article_id\tstart_position\tend_position\tentity_text\tentity_type\n"
 
     for article_id, preds_per_article in enumerate(pred_per_article):
@@ -136,7 +136,7 @@ if __name__ == "__main__":
     from transformers import AutoModelForTokenClassification
     from transformers import Trainer, TrainingArguments 
     
-    finetuned = '/home/dy/Flat-Lattice-Transformer/results/chinese-roberta-wwm-ext/checkpoint-1000'
+    finetuned = '/home/dy/flat-chinese-ner/results/chinese-roberta-wwm-ext/checkpoint-1000'
     model_type = 'hfl/chinese-roberta-wwm-ext'
     model = AutoModelForTokenClassification.from_pretrained(finetuned)
     trainer = Trainer(model=model)

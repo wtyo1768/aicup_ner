@@ -6,7 +6,6 @@ from fastNLP import DataSet
 from utils import get_bigrams
 import os
 import sys
-# sys.path.append('/home/dy/Flat-Lattice-Transformer/src')
 from src.dataset import romove_redundant_str, split_to_sentence, cut_words, get_fastnlp_ds
 from src.predict import load_dev
 from paths import *
@@ -27,6 +26,7 @@ def load_aicup_ner(
     char_min_freq=1,
     cv=False,
     fold=0,
+    use_pos_tag=False
     ):
     vocabs = {}
     embeddings = {}
@@ -48,7 +48,8 @@ def load_aicup_ner(
     for ds_name in ds.keys():
         ds[ds_name].apply_field(get_bigrams, 'chars', 'bigrams')
         ds[ds_name].add_seq_len('chars', new_field_name='seq_len')
-        ds[ds_name].apply_field(get_pos_tag, 'chars', 'pos_tag')
+        if use_pos_tag:
+            ds[ds_name].apply_field(get_pos_tag, 'chars', 'pos_tag')
 
     for k, v in ds.items():
         print('{}:{}'.format(k, len(v)))

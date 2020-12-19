@@ -11,16 +11,17 @@ python3 flat_main.py \
     --use_bert 1 \
     --only_bert 0 \
     --weight_decay 0.03 \
-    --after_bert 'lstm' \
-    --warmup 0.05 \
-    --optim 'sgd' \
-    --fix_bert_epoch 0 \
+    --after_bert 'mlp' \
+    --warmup 0.1 \
+    --optim 'adam' \
+    --fix_bert_epoch 5 \
     --epoch 20 \
     --batch 16 \
     --status 'train' \
     --lexicon_name 'lk' \
     --bigram_min_freq 1 \
     --embed_lr_rate 1.2 \
-    --fold 0 \
+    --fold 1 \
     --use_abs_pos false \
     --use_rel_pos true \
+    --use_pos_tag true 

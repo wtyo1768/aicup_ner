@@ -46,6 +46,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--cv',type=bool,default=False)
 parser.add_argument('--model_type',type=str,default='few')
 parser.add_argument('--fold',type=int,default=0)
+parser.add_argument('--use_pos_tag', type=bool, default=False)
 
 parser.add_argument('--update_every',type=int,default=1)
 parser.add_argument('--status',choices=['train','test', 'bagging'],default='train')
@@ -223,6 +224,7 @@ elif args.dataset == 'aicup':
                                                 cv=args.cv,
                                                 model_type=args.model_type,
                                                 fold=args.fold,
+                                                use_pos_tag=args.use_pos_tag
                                             )
 
 if args.gaz_dropout < 0:
@@ -416,7 +418,8 @@ if args.model == 'transformer':
                                          four_pos_shared=args.four_pos_shared,
                                          four_pos_fusion=args.four_pos_fusion,
                                          four_pos_fusion_shared=args.four_pos_fusion_shared,
-                                         bert_embedding=bert_embedding
+                                         bert_embedding=bert_embedding,
+                                         use_pos_tag=args.use_pos_tag
                                          )
     else:
         model = Transformer_SeqLabel(embeddings['lattice'], embeddings['bigram'], args.hidden, len(vocabs['label']),
@@ -446,8 +449,8 @@ elif args.model =='lstm':
                           embed_dropout=args.embed_dropout,output_dropout=args.output_dropout,use_bigram=True,
                           debug=args.debug)
 
-# for n,p in model.named_parameters():
-#     print('{}:{}'.format(n,p.size()))
+for n,p in model.named_parameters():
+    print('{}:{}'.format(n,p.size()))
 
 with torch.no_grad():
     print_info('{}init pram{}'.format('*'*15,'*'*15))
@@ -488,13 +491,6 @@ if args.self_supervised:
     chars_acc_metric.set_metric_name('chars_acc')
     metrics.append(chars_acc_metric)
 
-if args.see_param:
-    for n,p in model.named_parameters():
-        print_info('{}:{}'.format(n,p.size()))
-    print_info('see_param mode: finish')
-    if not args.debug:
-        exit(1208)
-
 print('layernum:', args.layer)
 
 if not args.only_bert:
@@ -530,7 +526,6 @@ else:
 
 
 
-
 if args.optim == 'adam':
     optimizer = optim.AdamW(param_,lr=args.lr,weight_decay=args.weight_decay)
 elif args.optim == 'sgd':
@@ -549,13 +544,6 @@ class Unfreeze_Callback(Callback):
         if self.epoch == self.fix_epoch_num+1:
             self.bert_embedding.requires_grad = True
 
-def vote(all_pred, reshape_dim1, reshape_dim2):
-    result = np.zeros((reshape_dim1, reshape_dim2))
-    for i in range(len(all_pred)):
-        for j in range(len(all_pred[i])):
-            tmp = np.bincount(np.array(all_pred[i][j].astype(int)))
-            result[i][j] = np.argmax(tmp)
-    return result.astype(int)
 
 def create_cb():
     lrschedule_callback = LRScheduler(lr_scheduler=LambdaLR(optimizer, lambda ep: 1 / (1 + 0.05*ep) ))
@@ -620,46 +608,44 @@ if args.status == 'train':
     print(cls_res)
 
 elif args.status == 'bagging':
-    models_path = [
-        '/home/dy/Flat-Lattice-Transformer/model/fold0/2020-12-18-21-16-56/epoch-14_step-2772_f-0.702703.pt',
-        '/home/dy/Flat-Lattice-Transformer/model/fold0/2020-12-18-21-16-56/epoch-14_step-2772_f-0.702703.pt',
-        '/home/dy/Flat-Lattice-Transformer/model/fold0/2020-12-18-21-16-56/epoch-14_step-2772_f-0.702703.pt'
-    ]
-
-    all_pred = []
-    for path_num in range(len(models_path)):
-
-        '''這邊GET每個MODEL的PREDICTION'''
-        model = Predictor(torch.load(models_path[path_num], map_location=device))
-        pred = model.predict(
-            datasets['aicup_dev'],
-            seq_len_field_name='seq_len',
-        )
-        pred = pred['pred']
-
-        '''記住等等的dim'''
-        reshape_dim1 = len(pred)
-        reshape_dim2 = len(pred[0])
-
-        '''所有模型的答案都接上去'''
-        all_pred.append(pred)
-
-    
-    combined_pred = np.zeros((reshape_dim1, reshape_dim2, len(models_path)))
-
-    for i, row in enumerate(all_pred):
-        for j, col in enumerate(row):
-            combined_pred[j][i] = [all_pred[m][j][i] for m in range(len(models_path))]
-
-    vote_result = vote(combined_pred, reshape_dim1, reshape_dim2)
-
-    print('vote result: ', vote_result)
-    pred = []
-    for i in range(len(vote_result)):
-        pred.append(vote_result[i])
-    print('pred: ', pred)
+    from voting import vote
     from src.dataset  import romove_redundant_str
     from src.predict import load_dev, split_to_pred_per_article, write_result, count_article_length
+
+    models_path = [
+        '/home/dy/flat-chinese-ner/model/fold0/2020-12-19-03-47-37/epoch-47_step-7332_f-0.791180.pt',
+        '/home/dy/flat-chinese-ner/model/fold0/2020-12-19-03-47-37/epoch-47_step-7332_f-0.791180.pt',
+        '/home/dy/flat-chinese-ner/model/fold0/2020-12-19-03-47-37/epoch-47_step-7332_f-0.791180.pt',
+    ]
+    for p in models_path:
+        assert(os.path.isfile(p))
+    
+    all_pred = []
+    with torch.no_grad():
+        for path_num in range(len(models_path)):
+            print(f'loading model_{path_num}...')
+
+            '''這邊GET每個MODEL的PREDICTION'''
+            model = Predictor(
+                torch.load(models_path[path_num], 
+                map_location=device)
+            )
+            print('predicting...')
+            # pred shape: List[ numpy_ndarray]
+            pred = model.predict(
+                datasets['aicup_dev'],
+                seq_len_field_name='seq_len',
+            )['pred']
+            # flatten 
+            pred = [int(ele) for sublist in pred for ele in sublist]
+
+            with open(f'./pred/pred{path_num}.npy', 'wb') as f:
+                print(f'writing pred{path_num}.npy...')    
+                np.save(f, np.array(pred))
+            '''所有模型的答案都接上去'''
+            all_pred.append(pred)    
+            
+    vote_result = vote(all_pred)
     
     dev_data = load_dev()
     origin_data = load_dev(simplify=False)
@@ -669,16 +655,20 @@ elif args.status == 'bagging':
         dev_data[idx], map_arr = romove_redundant_str(dev_data[idx], dev_mode=True)
         offset_map.append(map_arr)
 
-    pred = [vocabs['label'].to_word(ele) for arr in pred for ele in arr]
+    pred = [vocabs['label'].to_word(ele) for ele in vote_result]
     pred_per_article = split_to_pred_per_article([pred], count_article_length(dev_data))
     print('writing file...')
-    write_result(dev_data, pred_per_article, offset_map, origin_data)
+    write_result(
+        dev_data, 
+        pred_per_article, 
+        offset_map, 
+        origin_data, 
+        output_path='./bagging.tsv'
+    )
 
 else:
-    from fastNLP.core.tester import Tester
+    mpath = '/home/dy/flat-chinese-ner/model/fold0/2020-12-19-03-47-37/epoch-47_step-7332_f-0.791180.pt'
 
-    
-    mpath = '/home/dy/Flat-Lattice-Transformer/model/fold0/2020-12-18-10-47-25/epoch-56_step-9632_f-0.776786.pt'
     print('predicting...')
     model = Predictor(torch.load(mpath, map_location=device))
     pred = model.predict(
