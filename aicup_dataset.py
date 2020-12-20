@@ -19,19 +19,19 @@ def get_label_vocab(data_type):
     if model_teamwork:
         label = model_type[HANDLE]
     else:
-        list(all_type - few_type)
+        label = list(all_type - few_type)
     # label = [
     #     'money', 'education', 'name',
     #     'time', 'family', 'med_exam',
     #     'contact', 'location', 'ID', 'profession'
     # ]
     total_label = []
-    print(label)
+    
     for prefix in 'BI':
         total_label.extend([prefix+'-' + ele for ele in label])
     total_label.append('O')
-
-    label_vocab = Vocabulary()
+    print(total_label)
+    label_vocab = Vocabulary(unknown=None, padding=None)
     label_vocab.add_word_lst(total_label) 
     return label_vocab
 
@@ -66,10 +66,12 @@ def load_aicup_ner(
         'dev':dev.datasets['train'],
     }
     ds['aicup_dev'] = get_aicup_devds()
-
+    
+    jieba.enable_paddle()   
     for ds_name in ds.keys():
         ds[ds_name].apply_field(get_bigrams, 'chars', 'bigrams')
         ds[ds_name].add_seq_len('chars', new_field_name='seq_len')
+
         ds[ds_name].apply_field(get_pos_tag, 'chars', 'pos_tag')
 
     for k, v in ds.items():
@@ -144,6 +146,8 @@ def get_aicup_devds():
 
 def get_pos_tag(sen):
     sentences = ''.join(sen)
+    
+
     pos = pseg.cut(sentences)
 
     pos_tag = []

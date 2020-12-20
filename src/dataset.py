@@ -7,7 +7,7 @@ import torch
 import sys
 import opencc
 
-fpath = '/home/yuen/flat-chinese-ner/data/train_2.txt'
+fpath = '/home/dy/flat-chinese-ner/data/train_2.txt'
 USE_ALL_DATA_FOR_TRAIN = False
 max_len=128
 tagging_method = 'BI'
@@ -69,17 +69,17 @@ def romove_redundant_str(article_doc, dev_mode=False):
     article_doc = article_doc.replace('家属：', '&')
     article_doc = article_doc.replace('个管师：', '*')
     article_doc = article_doc.replace('护理师：', '~')
-    article_doc = article_doc.replace('…', '@')
-    article_doc = article_doc.replace('．', '(')
-    article_doc = article_doc.replace('一', '1')
-    article_doc = article_doc.replace('二', '2')
-    article_doc = article_doc.replace('三', '3')
-    article_doc = article_doc.replace('四', '4')
-    article_doc = article_doc.replace('五', '5')
-    article_doc = article_doc.replace('六', '6')
-    article_doc = article_doc.replace('七', '7')
-    article_doc = article_doc.replace('八', '8')
-    article_doc = article_doc.replace('九', '9')
+    # article_doc = article_doc.replace('…', '@')
+    # article_doc = article_doc.replace('．', '(')
+    # article_doc = article_doc.replace('一', '1')
+    # article_doc = article_doc.replace('二', '2')
+    # article_doc = article_doc.replace('三', '3')
+    # article_doc = article_doc.replace('四', '4')
+    # article_doc = article_doc.replace('五', '5')
+    # article_doc = article_doc.replace('六', '6')
+    # article_doc = article_doc.replace('七', '7')
+    # article_doc = article_doc.replace('八', '8')
+    # article_doc = article_doc.replace('九', '9')
 
 
     for word in article_doc:
@@ -172,7 +172,7 @@ def preprocess_input(trainingset, position):
 def split_to_sentence(data:List[str], input_id_types, max_len, tags=None):
     # 2 is num of special token added by tokenizer
     max_len = max_len - 2 
-    break_word = ['。', '，']
+    break_word = ['。', '，', '!']
     small_doc = []
     sentence = ''
     tmp = ''
@@ -372,7 +372,7 @@ def generate_type_id(doc, offset_map):
     return type_id
 
 
-def get_label(path='/home/yuen/flat-chinese-ner/data/train_2.txt'):
+def get_label(path='/home/dy/flat-chinese-ner/data/train_2.txt'):
     labels = list()
     with open(path, 'r', encoding='utf8') as f:
         file_text=f.read().encode('utf-8').decode('utf-8-sig')
@@ -470,7 +470,7 @@ def augment(prefix, fold ,aug_type=[], augument_size=3):
     return aug_texts, aug_tags
 
 
-HANDLE = 'number'
+HANDLE = 'default'
 model_type = {
     'minority' : [
         'ID', 'education', 'family', 'profession',
@@ -486,7 +486,7 @@ model_type = {
     'default' : []
 }
 aug_size = 0
-model_teamwork = True
+model_teamwork = False
 
 if __name__ == "__main__":
     '''
@@ -508,14 +508,14 @@ if __name__ == "__main__":
     if model_teamwork:
         # disjoint
         filter_type = all_type - set(aug_type)
-        trainingset, position, _ = loadInputFile(fpath, filter_type=filter_type)
+        trainingset, position, labels = loadInputFile(fpath, filter_type=filter_type)
     else:
-        trainingset, position, _ = loadInputFile(fpath, filter_type=[])
+        trainingset, position, labels = loadInputFile(fpath, filter_type=[])
         
     texts, tags, input_id_types = preprocess_input(trainingset, position)
     texts, tags, _ = split_to_sentence(texts, input_id_types, max_len, tags)
     
-
+    print('Using label:', set(list(labels.values())))
     print('Origin sentence...', len(texts))
     if remove_sentence_with_allO:
         texts, tags = filter_Otexts(texts, tags, list(all_type))

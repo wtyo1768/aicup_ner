@@ -1138,7 +1138,7 @@ class Transformer_Encoder_Layer(nn.Module):
 
 
 class Layer_Process(nn.Module):
-    def __init__(self, process_sequence, hidden_size, dropout=0.1, ):
+    def __init__(self, process_sequence, hidden_size, dropout=0.05, ):
         super().__init__()
         self.process_sequence = process_sequence.lower()
         self.hidden_size = hidden_size

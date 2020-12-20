@@ -198,8 +198,7 @@ refresh_data = False
 for k,v in args.__dict__.items():
     print_info('{} : {}'.format(k,v))
 
-raw_dataset_cache_name = os.path.join('cache',
-                                        ''.format(args.data_type)
+raw_dataset_cache_name = os.path.join('cache',args.data_type
                                       +'k{}'.format(args.fold)
                                       +'_cv:{}'.format(args.cv)
                                       +'_trainClip:{}'.format(args.train_clip) 
@@ -248,7 +247,7 @@ w_list = load_yangjie_rich_pretrain_word_list(yangjie_rich_pretrain_word_path,
                                               _refresh=refresh_data,
                                               _cache_fp='cache/{}'.format(args.lexicon_name))
 
-cache_name = os.path.join('cache', ''.format(args.data_type)
+cache_name = os.path.join('cache', args.data_type
                                     +'k{}'.format(args.fold)
                                     +'_cv:{}'.format(args.cv)
                                     +'_lattice'+'_only_train:{}'
@@ -323,7 +322,7 @@ import copy
 max_seq_len = max(* map(lambda x:max(x['seq_len']),datasets.values()))
 
 
-if not args.do_pred:
+if args.status=='train':
     show_index = 4
     print('raw_chars:{}'.format(list(datasets['train'][show_index]['raw_chars'])))
     print('lexicons:{}'.format(list(datasets['train'][show_index]['lexicons'])))
@@ -456,7 +455,7 @@ elif args.model =='lstm':
                           embed_dropout=args.embed_dropout,output_dropout=args.output_dropout,use_bigram=True,
                           debug=args.debug)
 
-if not args.do_pred:
+if args.status=='train':
     for n,p in model.named_parameters():
         print('{}:{}'.format(n,p.size()))
 
@@ -562,7 +561,7 @@ class Unfreeze_Callback(Callback):
 
 def create_cb():
     lrschedule_callback = LRScheduler(lr_scheduler=LambdaLR(optimizer, lambda ep: 1 / (1 + 0.05*ep) ))
-    clip_callback = GradientClipCallback(clip_type='value', clip_value=5)
+    clip_callback = GradientClipCallback(clip_type='value', clip_value=2)
     save_dir = os.path.join(
         root_path, 
         f'model/{args.data_type}', 
@@ -597,9 +596,39 @@ def create_cb():
         callbacks.append(WarmupCallback(warmup=args.warmup,))
     return callbacks
 
+
+def write_pred_tsv(pred):
+    pred = [int(ele) for sublist in pred for ele in sublist]
+
+    dev_data = load_dev()
+    origin_data = load_dev(simplify=False)
+
+    offset_map = []
+    for idx in range(len(dev_data)):
+        dev_data[idx], map_arr = romove_redundant_str(dev_data[idx], dev_mode=True)
+        offset_map.append(map_arr)
+
+    pred = [vocabs['label'].to_word(ele) for ele in pred]
+    pred_per_article = split_to_pred_per_article([pred], count_article_length(dev_data))
+    print('writing file...')
+    write_result(dev_data, pred_per_article, offset_map, origin_data)
+
+
+def visualize_error(ds, target, pred):
+    chars = list(ds['raw_chars'])
+    chars = [''.join(sublist) for sublist in chars]
+    output = ''
+
+    for i, sublist in enumerate(target):
+        for j, ele in enumerate(sublist):
+            line = f'{chars[i][j]} {ele} {pred[i][j]}\n'
+            output+=line
+
+    with open('../visualize.txt', 'w', encoding='utf-8') as f:
+        f.write(output)
+
+
 print('label num:', len(vocabs['label']))
-
-
 if args.status == 'train':
     trainer = Trainer(
         datasets['train'],model,optimizer,loss,args.batch,
@@ -625,11 +654,10 @@ if args.status == 'train':
     target = list(datasets['dev']['target'])
     target = [[vocabs['label'].to_word(ele) for ele in arr] for arr in target]
     cls_res = classification_report(target, pred)
+
+    visualize_error(datasets['dev'] ,target, pred)
     #print(cls_res)
     print('=============================')
-    print(pred[0])
-    
-    print(datasets['dev'][0]['raw_chars'])
     # Prediction to aicup data
     if args.do_pred:
         print('predicting...')
@@ -641,16 +669,17 @@ if args.status == 'train':
             f'./pred/pred{args.fold}.npy', 
             vocabs['label']
         )
+        write_pred_tsv(pred)
     
 elif args.status == 'bagging':
     from voting import vote
 
     models_path = [
-        '/home/yuen/flat-chinese-ner/model/fold0/2020-12-19-10-22-01/epoch-19_step-2964_f-0.756652.pt',
-        '/home/yuen/flat-chinese-ner/model/fold1/2020-12-19-10-02-29/epoch-15_step-2355_f-0.738956.pt',
-        '/home/yuen/flat-chinese-ner/model/fold2/2020-12-19-10-40-06/epoch-20_step-3140_f-0.730933.pt',
-        '/home/yuen/flat-chinese-ner/model/fold3/2020-12-19-10-58-24/epoch-17_step-2669_f-0.794857.pt',
-        '/home/yuen/flat-chinese-ner/model/fold4/2020-12-19-11-22-20/epoch-18_step-2844_f-0.758940.pt',
+        '/home/dy/flat-chinese-ner/model/fold0/2020-12-19-10-22-01/epoch-19_step-2964_f-0.756652.pt',
+        '/home/dy/flat-chinese-ner/model/fold1/2020-12-19-10-02-29/epoch-15_step-2355_f-0.738956.pt',
+        '/home/dy/flat-chinese-ner/model/fold2/2020-12-19-10-40-06/epoch-20_step-3140_f-0.730933.pt',
+        '/home/dy/flat-chinese-ner/model/fold3/2020-12-19-10-58-24/epoch-17_step-2669_f-0.794857.pt',
+        '/home/dy/flat-chinese-ner/model/fold4/2020-12-19-11-22-20/epoch-18_step-2844_f-0.758940.pt',
     ]
     for p in models_path:
         assert(os.path.isfile(p))
@@ -702,7 +731,7 @@ elif args.status == 'bagging':
 
 else:
     
-    mpath = '/home/yuen/flat-chinese-ner/model/fold3/2020-12-20-00-44-38/epoch-32_step-5024_f-0.770772.pt'
+    mpath = '/home/dy/flat-chinese-ner/model/fold3/2020-12-20-00-44-38/epoch-32_step-5024_f-0.770772.pt'
     print('predicting...')
     model = Predictor(torch.load(mpath, map_location=device))
     pred = model.predict(
@@ -710,22 +739,4 @@ else:
         seq_len_field_name='seq_len',
     )    
     pred = pred['pred']
-    pred = [int(ele) for sublist in pred for ele in sublist]
-
-    with open(f'./pred/pred{args.fold}.npy', 'wb') as f:
-        print(f'writing pred{args.fold}.npy...')    
-        np.save(f, np.array(pred))
-    
-    dev_data = load_dev()
-    origin_data = load_dev(simplify=False)
-
-    offset_map = []
-    for idx in range(len(dev_data)):
-        dev_data[idx], map_arr = romove_redundant_str(dev_data[idx], dev_mode=True)
-        offset_map.append(map_arr)
-
-    pred = [vocabs['label'].to_word(ele) for ele in pred]
-    pred_per_article = split_to_pred_per_article([pred], count_article_length(dev_data))
-    print('writing file...')
-    write_result(dev_data, pred_per_article, offset_map, origin_data)
-
+    write_pred_tsv(pred)
