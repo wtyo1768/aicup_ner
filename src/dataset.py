@@ -7,7 +7,7 @@ import torch
 import sys
 import opencc
 
-fpath = '/home/dy/Flat-Lattice-Transformer/data/train_2.txt'
+fpath = '/home/dy/flat-chinese-ner/data/train_2.txt'
 USE_ALL_DATA_FOR_TRAIN = False
 max_len=128
 tagging_method = 'BI'
@@ -19,19 +19,16 @@ all_type = {
         'clinical_event', 'location', 'ID', 'education',
         'others', 'name', 'time', 'profession', 'organization'
 }
-
-
-def loadInputFile(path, mode='many', custom_type=None):  
-    if custom_type == None:
-        rare_type = {
+few_type = {
         'others', 'organization', 
         'clinical_event', 
-        # 'ID', 'profession', 'contact', 'family','education', 
-        }
-    else: rare_type = set(custom_type)
+}
 
-    if mode == 'few': filter_arr = list(all_type - rare_type)
-    else: filter_arr = list(rare_type) 
+
+def loadInputFile(path, filter_type=[]):  
+    # The default filtering label list
+    if filter_type == []:
+        filter_type = list(few_type) 
 
     trainingset = list()
     position = list()
@@ -50,7 +47,7 @@ def loadInputFile(path, mode='many', custom_type=None):
         annotations=data[1:]
         for annot in annotations[1:]:
             annot=annot.split('\t')
-            if annot[4] in filter_arr and mode != 'no':
+            if annot[4] in filter_type:
                 continue
             position.extend(annot)
             mentions[annot[3]]=annot[4]
@@ -60,7 +57,9 @@ def loadInputFile(path, mode='many', custom_type=None):
 
 def romove_redundant_str(article_doc, dev_mode=False):
     str_len = {
-        '_' : 3, '*' : 4, '&' : 3, '^' : 3, '~': 4
+        '_' : 3, '*' : 4, '&' : 3, '^' : 3, '~': 4,
+        '@' : 2, 
+
     }
     ori_len = len(article_doc)
     
@@ -71,6 +70,8 @@ def romove_redundant_str(article_doc, dev_mode=False):
     article_doc = article_doc.replace('家属：', '&')
     article_doc = article_doc.replace('个管师：', '*')
     article_doc = article_doc.replace('护理师：', '~')
+    article_doc = article_doc.replace('……', '@')
+
 
     for word in article_doc:
         if word in str_len.keys():
@@ -360,7 +361,7 @@ def generate_type_id(doc, offset_map):
     return type_id
 
 
-def get_label(path='/home/dy/Flat-Lattice-Transformer/data/train_2.txt'):
+def get_label(path='/home/dy/flat-chinese-ner/data/train_2.txt'):
     labels = list()
     with open(path, 'r', encoding='utf8') as f:
         file_text=f.read().encode('utf-8').decode('utf-8-sig')
@@ -458,22 +459,23 @@ def augment(prefix, fold ,aug_type=[], augument_size=3):
     return aug_texts, aug_tags
 
 
-HANDLE = 'minority'
+HANDLE = 'number'
 model_type = {
     'minority' : [
         'ID', 'education', 'family', 'profession',
     ],
     'number' : [
-        'money', 'time','med_exam',
-        'ID', 
+        'money', 'time', 'med_exam', 'ID', 
     ],
     'string' : [
         'money', 'time', 'contact', 'family',
         'location', 'education',
         'name', 'profession', 
     ],
+    'default' : []
 }
-aug_size = 2
+aug_size = 0
+model_teamwork = True
 
 if __name__ == "__main__":
     '''
@@ -489,14 +491,19 @@ if __name__ == "__main__":
 
         Augment data need to split into sentence
     ''' 
-    
+    # 
     aug_type = model_type[HANDLE]
     remove_sentence_with_allO = False
-    
-    # 1.
-    trainingset, position, _ = loadInputFile(fpath, mode='many')
+    if model_teamwork:
+        # disjoint
+        filter_type = all_type - set(aug_type)
+        trainingset, position, _ = loadInputFile(fpath, filter_type=filter_type)
+    else:
+        trainingset, position, _ = loadInputFile(fpath, filter_type=[])
+        
     texts, tags, input_id_types = preprocess_input(trainingset, position)
     texts, tags, _ = split_to_sentence(texts, input_id_types, max_len, tags)
+    
 
     print('Origin sentence...', len(texts))
     if remove_sentence_with_allO:
@@ -521,12 +528,13 @@ if __name__ == "__main__":
         write_ds(f'{prefix}filtered/raw', filtered_texts, filtered_tags, split_sen=False)
         
         if aug_size==0:
-            write_ds(f'{prefix}/train/train', orgin_train, orgin_tags)
-            write_ds(f'{prefix}dev/dev', dev_text, dev_tags)
+            # Augmentation Disabled 
+            write_ds(f'{prefix}/train/{HANDLE}', orgin_train, orgin_tags)
+            write_ds(f'{prefix}dev/{HANDLE}', dev_text, dev_tags)
             continue
         
         aug_texts, aug_tags = augment(prefix, idx, aug_type=aug_type, augument_size=aug_size)
-        write_ds(f'{prefix}dev/dev', dev_text, dev_tags)
+        write_ds(f'{prefix}dev/{HANDLE}', dev_text, dev_tags)
         
 
         aug_sen, sen_tags, _ = split_to_sentence(aug_texts, None, max_len, aug_tags)
@@ -543,7 +551,7 @@ if __name__ == "__main__":
         orgin_train += aug_sen
         orgin_tags += sen_tags
         orgin_train, orgin_tags = zip(*shuffle(list(zip(orgin_train, orgin_tags))))
-        write_ds(f'{prefix}/train/train', orgin_train, orgin_tags)
+        write_ds(f'{prefix}/train/{HANDLE}', orgin_train, orgin_tags)
         print('After augmentation', len(orgin_train))
 
         print('train:',len(orgin_train),

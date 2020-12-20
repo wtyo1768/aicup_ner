@@ -8,7 +8,7 @@ do
         --dataset 'aicup' \
         --number_normalized 3 \
         --cv true \
-        --use_pos_tag 1 \
+        --use_pos_tag 0 \
         --model_type 'many' \
         --use_bigram 0 \
         --layer 1 \

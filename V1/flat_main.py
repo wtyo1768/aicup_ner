@@ -48,7 +48,7 @@ from seqeval.metrics import classification_report
 parser = argparse.ArgumentParser()
 # performance inrelevant
 parser.add_argument('--cv',type=bool,default=False)
-parser.add_argument('--model_type',type=str,default='few')
+parser.add_argument('--data_type',type=str,default='few')
 parser.add_argument('--fold',type=int,default=0)
 parser.add_argument('--use_pos_tag', type=int, default=0, required=True)
 parser.add_argument('--do_pred', type=int, default=0)
@@ -199,7 +199,8 @@ for k,v in args.__dict__.items():
     print_info('{} : {}'.format(k,v))
 
 raw_dataset_cache_name = os.path.join('cache',
-                                      'k{}'.format(args.fold)
+                                        ''.format(args.data_type)
+                                      +'k{}'.format(args.fold)
                                       +'_cv:{}'.format(args.cv)
                                       +'_trainClip:{}'.format(args.train_clip) 
                                       +'bgminfreq_{}'.format(args.bigram_min_freq)
@@ -227,7 +228,7 @@ elif args.dataset == 'aicup':
                                                 bigram_min_freq=args.bigram_min_freq,
                                                 only_train_min_freq=args.only_train_min_freq,
                                                 cv=args.cv,
-                                                model_type=args.model_type,
+                                                data_type=args.data_type,
                                                 fold=args.fold,
                                             )
 
@@ -247,7 +248,8 @@ w_list = load_yangjie_rich_pretrain_word_list(yangjie_rich_pretrain_word_path,
                                               _refresh=refresh_data,
                                               _cache_fp='cache/{}'.format(args.lexicon_name))
 
-cache_name = os.path.join('cache', 'k{}'.format(args.fold)
+cache_name = os.path.join('cache', ''.format(args.data_type)
+                                    +'k{}'.format(args.fold)
                                     +'_cv:{}'.format(args.cv)
                                     +'_lattice'+'_only_train:{}'
                                     +'_trainClip:{}'+'_norm_num:{}'
@@ -561,7 +563,15 @@ class Unfreeze_Callback(Callback):
 def create_cb():
     lrschedule_callback = LRScheduler(lr_scheduler=LambdaLR(optimizer, lambda ep: 1 / (1 + 0.05*ep) ))
     clip_callback = GradientClipCallback(clip_type='value', clip_value=5)
-    save_callback = SaveModelCallback(top=1, save_dir=os.path.join(root_path, 'model', f'fold{args.fold}'))
+    save_dir = os.path.join(
+        root_path, 
+        f'model/{args.data_type}', 
+        f'fold{args.fold}'
+    )
+    save_callback = SaveModelCallback(
+        top=1, 
+        save_dir=save_dir
+    )
     if args.cv:
         callbacks = [
             lrschedule_callback,
@@ -633,11 +643,11 @@ elif args.status == 'bagging':
     from voting import vote
 
     models_path = [
-        '/home/dy/Flat-Lattice-Transformer/model/fold0/2020-12-19-10-22-01/epoch-19_step-2964_f-0.756652.pt',
-        '/home/dy/Flat-Lattice-Transformer/model/fold1/2020-12-19-10-02-29/epoch-15_step-2355_f-0.738956.pt',
-        '/home/dy/Flat-Lattice-Transformer/model/fold2/2020-12-19-10-40-06/epoch-20_step-3140_f-0.730933.pt',
-        '/home/dy/Flat-Lattice-Transformer/model/fold3/2020-12-19-10-58-24/epoch-17_step-2669_f-0.794857.pt',
-        '/home/dy/Flat-Lattice-Transformer/model/fold4/2020-12-19-11-22-20/epoch-18_step-2844_f-0.758940.pt',
+        '/home/dy/flat-chinese-ner/model/fold0/2020-12-19-10-22-01/epoch-19_step-2964_f-0.756652.pt',
+        '/home/dy/flat-chinese-ner/model/fold1/2020-12-19-10-02-29/epoch-15_step-2355_f-0.738956.pt',
+        '/home/dy/flat-chinese-ner/model/fold2/2020-12-19-10-40-06/epoch-20_step-3140_f-0.730933.pt',
+        '/home/dy/flat-chinese-ner/model/fold3/2020-12-19-10-58-24/epoch-17_step-2669_f-0.794857.pt',
+        '/home/dy/flat-chinese-ner/model/fold4/2020-12-19-11-22-20/epoch-18_step-2844_f-0.758940.pt',
     ]
     for p in models_path:
         assert(os.path.isfile(p))
@@ -688,14 +698,8 @@ elif args.status == 'bagging':
     )
 
 else:
-    models_path = [
-        '/home/dy/Flat-Lattice-Transformer/model/fold0/2020-12-19-12-44-25/epoch-20_step-3120_f-0.764858.pt',
-        '/home/dy/Flat-Lattice-Transformer/model/fold1/2020-12-19-13-01-24/epoch-17_step-2669_f-0.735084.pt',
-        '/home/dy/Flat-Lattice-Transformer/model/fold2/2020-12-19-13-18-18/epoch-13_step-2041_f-0.716099.pt',
-        '/home/dy/Flat-Lattice-Transformer/model/fold3/2020-12-19-13-35-11/epoch-20_step-3140_f-0.781411.pt',
-        '/home/dy/Flat-Lattice-Transformer/model/fold4/2020-12-19-14-06-35/epoch-18_step-2844_f-0.742254.pt',
-    ]
-    mpath = models_path[args.fold]
+    
+    mpath = '/home/dy/flat-chinese-ner/model/fold3/2020-12-20-00-44-38/epoch-32_step-5024_f-0.770772.pt'
     print('predicting...')
     model = Predictor(torch.load(mpath, map_location=device))
     pred = model.predict(

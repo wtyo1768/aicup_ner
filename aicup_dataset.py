@@ -11,16 +11,27 @@ from src.predict import load_dev
 from paths import *
 import jieba
 import jieba.posseg as pseg
+from src.dataset import model_type, HANDLE, model_teamwork, all_type, few_type
 
-def get_label_vocab():
-    label_vocab = Vocabulary()
-    label = ['money', 'education', 'name', 'time', 'family', 'med_exam', 'contact', 'location', 'ID', 'profession']
+
+def get_label_vocab(data_type):
+    
+    if model_teamwork:
+        label = model_type[HANDLE]
+    else:
+        list(all_type - few_type)
+    # label = [
+    #     'money', 'education', 'name',
+    #     'time', 'family', 'med_exam',
+    #     'contact', 'location', 'ID', 'profession'
+    # ]
     total_label = []
     print(label)
     for prefix in 'BI':
         total_label.extend([prefix+'-' + ele for ele in label])
     total_label.append('O')
 
+    label_vocab = Vocabulary()
     label_vocab.add_word_lst(total_label) 
     return label_vocab
 
@@ -32,7 +43,7 @@ def load_aicup_ner(
     char_word_dropout=0.01,
     only_train_min_freq=0,
     bigram_min_freq=1,
-    model_type='many',
+    data_type='string',
     index_token=True,
     char_min_freq=1,
     cv=False,
@@ -41,8 +52,9 @@ def load_aicup_ner(
     vocabs = {}
     embeddings = {}
 
-    train_path = os.path.join(path, f'fold{fold}', 'train/train')
-    dev_path = os.path.join(path, f'fold{fold}', 'dev/dev',)
+    train_path = os.path.join(path, f'fold{fold}', f'train/{data_type}')
+    dev_path = os.path.join(path, f'fold{fold}', f'dev/{data_type}')
+    print('-----------------Dataset---------------------')
     print('loading data from', train_path,'\nand', dev_path)
     loader = ConllLoader(['chars', 'target'])
 
@@ -67,7 +79,7 @@ def load_aicup_ner(
     bigram_vocab = Vocabulary()
     pos_vocab = Vocabulary()
 
-    label_vocab = get_label_vocab()
+    label_vocab = get_label_vocab(data_type)
     pos_vocab.from_dataset(*list(ds.values()), field_name='pos_tag')
 
     if cv: no_create_entry_ds = [ds['dev'], ds['aicup_dev']]
@@ -113,6 +125,7 @@ def load_aicup_ner(
     embeddings['bigram'] = bigram_embedding
     print(ds['train'])
     print(set([ele[0].split('-')[1] if ele[0]!='O' and ele[0][0]!='<' else ele[0] for ele in list(label_vocab)]))
+    print('------------------------------------------')
     return ds, vocabs, embeddings
 
 
