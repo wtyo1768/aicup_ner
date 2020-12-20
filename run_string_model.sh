@@ -17,7 +17,7 @@ python3 flat_main.py \
     --warmup 0.3 \
     --optim 'adam' \
     --fix_bert_epoch 0 \
-    --epoch 15 \
+    --epoch 1 \
     --batch 16 \
     --status 'train' \
     --lexicon_name 'lk' \
@@ -26,8 +26,7 @@ python3 flat_main.py \
     --fold 3 \
     --use_abs_pos true \
     --use_rel_pos false \
-    --do_pred 0 \
-    --post 'd' 
+    --do_pred 1 
 
 
 # bagging with no bigram

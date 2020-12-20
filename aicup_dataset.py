@@ -155,10 +155,17 @@ def get_pos_tag(sen):
     
 
 if __name__ == "__main__":
-    label_vocab = get_label_vocab()
-    print(label_vocab)
-    print(list(label_vocab))
+    dev_path = os.path.join(aicup_ner_path, f'fold{0}', f'dev/number')
+    print('-----------------xxDataset---------------------')
+    loader = ConllLoader(['chars', 'target'])
+
+    dev = loader.load(dev_path)
+    print(dev.datasets['train'])
     pass
+    # label_vocab = get_label_vocab('number)
+    # print(label_vocab)
+    # print(list(label_vocab))
+    # pass
     # ds, vocabs, embeddings = load_aicup_ner(
     #     aicup_ner_path,
     #     yangjie_rich_pretrain_unigram_path,
@@ -174,7 +181,7 @@ if __name__ == "__main__":
     # )
     # print(vocabs['label'])
     
-    # load_aicup_ner(
+    # ds, vocabs, embeddings = load_aicup_ner(
     #     aicup_ner_path,
     #     yangjie_rich_pretrain_unigram_path,
     #     yangjie_rich_pretrain_bigram_path,
@@ -184,6 +191,7 @@ if __name__ == "__main__":
     #     only_train_min_freq=True,
     #     char_word_dropout=0.01,
     #     cv=True,
-    #     model_type='many',
     #     fold=0,
+    #     data_type='number'
     # )
+    # print(ds)

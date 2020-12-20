@@ -7,12 +7,12 @@ import torch
 import sys
 import opencc
 
-fpath = '/home/dy/flat-chinese-ner/data/train_2.txt'
+fpath = '/home/yuen/flat-chinese-ner/data/train_2.txt'
 USE_ALL_DATA_FOR_TRAIN = False
 max_len=128
 tagging_method = 'BI'
 role_map = {
-    '_' : 0, '*' : 0, '^' : 1, '&' : 1, '~' : 0
+    '_' : 0, '*' : 0, '^' : 1, '&' : 1, '~' : 0, '@': 0, '(': 0
 }
 all_type = {
         'med_exam', 'money', 'contact', 'family',
@@ -58,8 +58,7 @@ def loadInputFile(path, filter_type=[]):
 def romove_redundant_str(article_doc, dev_mode=False):
     str_len = {
         '_' : 3, '*' : 4, '&' : 3, '^' : 3, '~': 4,
-        '@' : 2, 
-
+        '@' : 1, '．':1
     }
     ori_len = len(article_doc)
     
@@ -70,7 +69,17 @@ def romove_redundant_str(article_doc, dev_mode=False):
     article_doc = article_doc.replace('家属：', '&')
     article_doc = article_doc.replace('个管师：', '*')
     article_doc = article_doc.replace('护理师：', '~')
-    article_doc = article_doc.replace('……', '@')
+    article_doc = article_doc.replace('…', '@')
+    article_doc = article_doc.replace('．', '(')
+    article_doc = article_doc.replace('一', '1')
+    article_doc = article_doc.replace('二', '2')
+    article_doc = article_doc.replace('三', '3')
+    article_doc = article_doc.replace('四', '4')
+    article_doc = article_doc.replace('五', '5')
+    article_doc = article_doc.replace('六', '6')
+    article_doc = article_doc.replace('七', '7')
+    article_doc = article_doc.replace('八', '8')
+    article_doc = article_doc.replace('九', '9')
 
 
     for word in article_doc:
@@ -94,6 +103,8 @@ def romove_redundant_str(article_doc, dev_mode=False):
         article_doc = article_doc.replace('^', '')
         article_doc = article_doc.replace('&', '')
         article_doc = article_doc.replace('~', '')
+        article_doc = article_doc.replace('@', '')
+        article_doc = article_doc.replace('(', '')
     offset_map = np.delete(offset_map, 0)
     return article_doc, offset_map
 
@@ -361,7 +372,7 @@ def generate_type_id(doc, offset_map):
     return type_id
 
 
-def get_label(path='/home/dy/flat-chinese-ner/data/train_2.txt'):
+def get_label(path='/home/yuen/flat-chinese-ner/data/train_2.txt'):
     labels = list()
     with open(path, 'r', encoding='utf8') as f:
         file_text=f.read().encode('utf-8').decode('utf-8-sig')

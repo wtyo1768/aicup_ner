@@ -11,7 +11,7 @@ max_len = 128
 output_path = 'output.tsv'
 
 
-def load_dev(path='/home/dy/flat-chinese-ner/data/test.txt', simplify=True):
+def load_dev(path='/home/yuen/flat-chinese-ner/data/test.txt', simplify=True):
     test_data = []
     with open(path, 'r', encoding='utf8') as f:
         file_text=f.read().encode('utf-8').decode('utf-8-sig')
@@ -153,7 +153,7 @@ if __name__ == "__main__":
     from transformers import AutoModelForTokenClassification
     from transformers import Trainer, TrainingArguments 
     
-    finetuned = '/home/dy/flat-chinese-ner/results/chinese-roberta-wwm-ext/checkpoint-1000'
+    finetuned = '/home/yuen/flat-chinese-ner/results/chinese-roberta-wwm-ext/checkpoint-1000'
     model_type = 'hfl/chinese-roberta-wwm-ext'
     model = AutoModelForTokenClassification.from_pretrained(finetuned)
     trainer = Trainer(model=model)
