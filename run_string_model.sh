@@ -20,13 +20,14 @@ python3 flat_main.py \
     --epoch 5 \
     --batch 16 \
     --status 'train' \
-    --lexicon_name 'lk' \
+    --lexicon_name 'yj' \
     --bigram_min_freq 1 \
     --embed_lr_rate 1.3 \
     --fold 3 \
     --use_abs_pos false \
     --use_rel_pos true \
-    --do_pred 1 
+    --do_pred 1 \
+    --crf_lr 0.1
 
 # bagging with no bigram
 # TODO 等價字替換 nlpcda

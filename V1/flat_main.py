@@ -48,6 +48,8 @@ from seqeval.metrics import classification_report
 parser = argparse.ArgumentParser()
 # performance inrelevant
 parser.add_argument('--cv',type=bool,default=False)
+parser.add_argument('--crf_lr',type=float,default=0.1)
+
 parser.add_argument('--data_type',type=str,default='few')
 parser.add_argument('--fold',type=int,default=0)
 parser.add_argument('--use_pos_tag', type=int, default=0, required=True)
@@ -517,15 +519,19 @@ if not args.only_bert:
         bigram_embedding_param = list(model.bigram_embed.parameters())
         gaz_embedding_param = list(model.lattice_embed.parameters())
         embedding_param = bigram_embedding_param
+        crf_param = list(model.crf.parameters())
+        crf_param_ids = list(map(id,crf_param))
+
         if args.lattice:
             gaz_embedding_param = list(model.lattice_embed.parameters())
             embedding_param = embedding_param+gaz_embedding_param
         embedding_param_ids = list(map(id,embedding_param))
         non_embedding_param = list(filter(
-            lambda x:id(x) not in embedding_param_ids and id(x) not in bert_embedding_param_ids,
+            lambda x:id(x) not in embedding_param_ids and id(x) not in bert_embedding_param_ids and  id(x) not in crf_param_ids,
                                           model.parameters()))
         param_ = [{'params': non_embedding_param}, {'params': embedding_param, 'lr': args.lr * args.embed_lr_rate},
-                  {'params':bert_embedding_param,'lr':args.bert_lr_rate*args.lr}]
+                  {'params':bert_embedding_param,'lr':args.bert_lr_rate*args.lr},
+                  {'params':crf_param, 'lr': args.crf_lr}]
 else:
     bert_embedding_param = list(model.bert_embedding.parameters())
     bert_embedding_param_ids = list(map(id,bert_embedding_param))
@@ -656,7 +662,7 @@ if args.status == 'train':
     cls_res = classification_report(target, pred)
 
     visualize_error(datasets['dev'] ,target, pred)
-    #print(cls_res)
+    print(cls_res)
     print('=============================')
     # Prediction to aicup data
     if args.do_pred:

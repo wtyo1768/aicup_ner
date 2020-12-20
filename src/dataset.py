@@ -485,8 +485,9 @@ model_type = {
     ],
     'default' : []
 }
-aug_size = 0
+aug_size = 3
 model_teamwork = False
+remove_sentence_with_allO = True
 
 if __name__ == "__main__":
     '''
@@ -503,8 +504,11 @@ if __name__ == "__main__":
         Augment data need to split into sentence
     ''' 
     # 
-    aug_type = model_type[HANDLE]
-    remove_sentence_with_allO = False
+    if HANDLE =='default':
+        aug_type = ['family', 'location', 'education', 'profession', 'contact']
+    else:
+        aug_type = model_type[HANDLE]
+    
     if model_teamwork:
         # disjoint
         filter_type = all_type - set(aug_type)
@@ -517,9 +521,6 @@ if __name__ == "__main__":
     
     print('Using label:', set(list(labels.values())))
     print('Origin sentence...', len(texts))
-    if remove_sentence_with_allO:
-        texts, tags = filter_Otexts(texts, tags, list(all_type))
-        print('Sentence with valid tags', len(texts))
     
     texts = np.array(texts, dtype=object)
     tags = np.array(tags, dtype=object)
@@ -530,6 +531,11 @@ if __name__ == "__main__":
     for idx, (train, test) in enumerate(kf.split(texts)):
         orgin_train, orgin_tags = texts[train].tolist(), tags[train].tolist()
         dev_text, dev_tags = texts[test], tags[test]
+        if remove_sentence_with_allO:
+            orgin_train, orgin_tags = filter_Otexts(orgin_train, orgin_tags, list(all_type))
+            print('Sentence with valid tags', len(texts))
+
+
 
         print(f'--------Fold {idx}----------')
         filtered_texts, filtered_tags = filter_Otexts(orgin_train, orgin_tags, aug_type)

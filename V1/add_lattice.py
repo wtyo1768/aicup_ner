@@ -105,6 +105,10 @@ def equip_chinese_ner_with_lexicon(datasets,vocabs,embeddings,w_list,word_embedd
     if number_normalized == 2:
         for k,v in datasets.items():
             v.apply_field(normalize_char,'chars','chars')
+        
+        if cv: no_create_entry_ds = [datasets['dev'], datasets['aicup_dev']]
+        else: no_create_entry_ds = [datasets['dev'], datasets['test'], ds['aicup_dev']]
+
         vocabs['char'] = Vocabulary()
         vocabs['char'].from_dataset(datasets['train'], field_name='chars',
                                 no_create_entry_dataset=no_create_entry_ds)
