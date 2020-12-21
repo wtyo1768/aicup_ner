@@ -398,13 +398,18 @@ if args.model == 'transformer':
                 vocabs['lattice'],
                 model_dir_or_name='cn-wwm',
                 requires_grad=False,
-                word_dropout=0.01,
+                word_dropout=0.02,
                 layers='-1',
             )
         else:
             bert_embedding = None
         if args.only_bert:
-            model = BERT_SeqLabel(bert_embedding,len(vocabs['label']),vocabs,args.after_bert)
+            model = BERT_SeqLabel(
+                bert_embedding,
+                len(vocabs['label']),
+                vocabs,args.after_bert,
+                use_pos_tag=args.use_pos_tag
+            )
         else:
             model = Lattice_Transformer_SeqLabel(embeddings['lattice'], embeddings['bigram'], args.hidden, len(vocabs['label']),
                                          args.head, args.layer, args.use_abs_pos,args.use_rel_pos,
@@ -427,7 +432,8 @@ if args.model == 'transformer':
                                          four_pos_fusion=args.four_pos_fusion,
                                          four_pos_fusion_shared=args.four_pos_fusion_shared,
                                          bert_embedding=bert_embedding,
-                                         use_pos_tag=args.use_pos_tag
+                                         use_pos_tag=args.use_pos_tag,
+                                         after_bert=args.after_bert
                                          )
     else:
         model = Transformer_SeqLabel(embeddings['lattice'], embeddings['bigram'], args.hidden, len(vocabs['label']),
@@ -451,7 +457,7 @@ if args.model == 'transformer':
 
 
 elif args.model =='lstm':
-    model = LSTM_SeqLabel_True(embeddings['char'],embeddings['bigram'],embeddings['bigram'],args.hidden,
+    model = LSTM_SeqLabel(embeddings['char'],embeddings['bigram'],embeddings['bigram'],args.hidden,
                                len(vocabs['label']),
                           bidirectional=True,device=device,
                           embed_dropout=args.embed_dropout,output_dropout=args.output_dropout,use_bigram=True,
@@ -479,8 +485,8 @@ if args.status=='train':
         print_info('{}init pram{}'.format('*' * 15, '*' * 15))
 
 loss = LossInForward()
+# encoding_type = 'bioes'
 encoding_type = 'bio'
-
 f1_metric = SpanFPreRecMetric(
     vocabs['label'],
     pred='pred',
@@ -529,25 +535,34 @@ if not args.only_bert:
         non_embedding_param = list(filter(
             lambda x:id(x) not in embedding_param_ids and id(x) not in bert_embedding_param_ids and  id(x) not in crf_param_ids,
                                           model.parameters()))
-        param_ = [{'params': non_embedding_param}, {'params': embedding_param, 'lr': args.lr * args.embed_lr_rate},
-                  {'params':bert_embedding_param,'lr':args.bert_lr_rate*args.lr},
-                  {'params':crf_param, 'lr': args.crf_lr}]
+        param_ = [
+            {'params': non_embedding_param}, 
+            {'params': embedding_param, 'lr': args.lr * args.embed_lr_rate},
+            {'params':bert_embedding_param,'lr':args.bert_lr_rate*args.lr},
+            {'params':crf_param, 'lr': args.crf_lr},
+        ]
 else:
     bert_embedding_param = list(model.bert_embedding.parameters())
     bert_embedding_param_ids = list(map(id,bert_embedding_param))
-    embedding_param = list(model.pos_embedding.parameters())
-    embedding_param_ids = list(map(id,embedding_param))
+    crf_param = list(model.crf.parameters())
+    crf_param_ids = list(map(id,crf_param))
+
     non_embedding_param = list(filter(
-    lambda x:id(x) not in embedding_param_ids and id(x) not in bert_embedding_param_ids,
+    lambda x: id(x) not in bert_embedding_param_ids and  id(x) not in crf_param_ids,
         model.parameters()))
     param_ = [
         {'params': non_embedding_param},
-        {'params':bert_embedding_param,'lr':args.bert_lr_rate*args.lr}]
+        {'params':bert_embedding_param,'lr':args.bert_lr_rate*args.lr},
+        {'params':crf_param, 'lr': args.crf_lr},
+    ]
 
 
 
 if args.optim == 'adam':
-    optimizer = optim.AdamW(param_,lr=args.lr,weight_decay=args.weight_decay)
+    optimizer = optim.AdamW(
+        param_,
+        lr=args.lr,
+        weight_decay=args.weight_decay)
 elif args.optim == 'sgd':
     optimizer = optim.SGD(param_,lr=args.lr,momentum=args.momentum,
                           weight_decay=args.weight_decay)

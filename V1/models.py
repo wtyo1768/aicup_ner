@@ -234,7 +234,8 @@ class Lattice_Transformer_SeqLabel(nn.Module):
                  self_supervised=False,attn_ff=True,pos_norm=False,ff_activate='relu',rel_pos_init=0,
                  abs_pos_fusion_func='concat',embed_dropout_pos='0',
                  four_pos_shared=True,four_pos_fusion=None,four_pos_fusion_shared=True,
-                 bert_embedding=None, use_pos_tag=False):
+                 bert_embedding=None, use_pos_tag=False,
+                 after_bert='mlp'):
         '''
         :param rel_pos_init: 如果是0，那么从-max_len到max_len的相对位置编码矩阵就按0-2*max_len来初始化，
         如果是1，那么就按-max_len,max_len来初始化
@@ -248,7 +249,7 @@ class Lattice_Transformer_SeqLabel(nn.Module):
         if bert_embedding is not None:
             self.use_bert = True
             self.bert_embedding = bert_embedding
-        
+        self.after_bert = after_bert
         self.four_pos_fusion_shared = four_pos_fusion_shared
         self.mode = mode
         self.four_pos_shared = four_pos_shared
@@ -395,6 +396,13 @@ class Lattice_Transformer_SeqLabel(nn.Module):
             self.hidden_size+self.pos_feature_size,
             self.label_size
         )
+        if self.after_bert == 'lstm':
+            self.pj_after_bert = LSTM(
+                self.hidden_size+self.pos_feature_size,
+                (self.hidden_size+self.pos_feature_size)//2,
+                bidirectional=True,
+                num_layers=2,
+            )
         if self.self_supervised:
             self.output_self_supervised = nn.Linear(self.hidden_size,len(vocabs['char']))
             print('self.output_self_supervised:{}'.format(self.output_self_supervised.weight.size()))
@@ -482,7 +490,8 @@ class Lattice_Transformer_SeqLabel(nn.Module):
 
         pred = self.output(encoded)
         mask = seq_len_to_mask(seq_len).bool()
-
+        if self.after_bert == 'lstm':
+            pred, _ = self.pj_after_bert(pred, seq_len)
         if self.mode['debug']:
             print('debug mode:finish!')
             exit(1208)
@@ -514,13 +523,15 @@ class BERT_SeqLabel(nn.Module):
         self.label_size = label_size
         self.vocabs = vocabs
         self.hidden_size = bert_embedding._embed_size
-
-        self.pos_embed_size = len(list(vocabs['pos_tag']))
-        self.pos_feats_size = 20
+        self.use_pos_tag = use_pos_tag
+        self.pos_feats_size = 0
+        if self.use_pos_tag:
+            self.pos_embed_size = len(list(vocabs['pos_tag']))
+            self.pos_feats_size = 20
+            self.pos_embedding = nn.Embedding(self.pos_embed_size, self.pos_feats_size)
         
-        self.pos_embedding = nn.Embedding(self.pos_embed_size, self.pos_feats_size)
         if self.after_bert == 'lstm':
-            self.lstm = LSTM(
+            self.lstm = nn.LSTM(
                 bert_embedding._embed_size+self.pos_feats_size,
                 (bert_embedding._embed_size+self.pos_feats_size)//2,
                 bidirectional=True,
@@ -535,7 +546,7 @@ class BERT_SeqLabel(nn.Module):
         self.dropout = MyDropout(0.2)
 
     def forward(self, lattice, bigrams, seq_len, lex_num, pos_s, pos_e, pos_tag,
-                target, chars_target=None):
+                target=None, chars_target=None):
         batch_size = lattice.size(0)
         max_seq_len_and_lex_num = lattice.size(1)
         max_seq_len = bigrams.size(1)
@@ -545,16 +556,13 @@ class BERT_SeqLabel(nn.Module):
         words.masked_fill_((~mask),self.vocabs['lattice'].padding_idx)
         
         encoded = self.bert_embedding(words)
-        pos_embed = self.pos_embedding(pos_tag)
-        # print('bert',encoded.shape)
-        # print('pos_embed',pos_embed.shape)
 
-        encoded = torch.cat([encoded, pos_embed],dim=-1)
-        # print('concated',encoded.shape)
+        if self.use_pos_tag:
+            pos_embed = self.pos_embedding(pos_tag)
+            encoded = torch.cat([encoded, pos_embed],dim=-1)
 
         if self.after_bert == 'lstm':
             encoded, _ = self.lstm(encoded, seq_len)
-            # print('lstm',encoded.shape)
             encoded = self.dropout(encoded)
         
         pred = self.output(encoded)

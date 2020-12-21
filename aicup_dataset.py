@@ -11,7 +11,7 @@ from src.predict import load_dev
 from paths import *
 import jieba
 import jieba.posseg as pseg
-from src.dataset import model_type, HANDLE, model_teamwork, all_type, few_type
+from src.dataset import model_type, HANDLE, model_teamwork, all_type, few_type, tagging_method
 
 
 def get_label_vocab(data_type):
@@ -27,7 +27,7 @@ def get_label_vocab(data_type):
     # ]
     total_label = []
     
-    for prefix in 'BI':
+    for prefix in tagging_method:
         total_label.extend([prefix+'-' + ele for ele in label])
     total_label.append('O')
     print(total_label)

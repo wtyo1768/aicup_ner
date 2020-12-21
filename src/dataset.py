@@ -7,6 +7,7 @@ import torch
 import sys
 import opencc
 
+
 fpath = '/home/dy/flat-chinese-ner/data/train_2.txt'
 USE_ALL_DATA_FOR_TRAIN = False
 max_len=128
@@ -58,10 +59,9 @@ def loadInputFile(path, filter_type=[]):
 def romove_redundant_str(article_doc, dev_mode=False):
     str_len = {
         '_' : 3, '*' : 4, '&' : 3, '^' : 3, '~': 4,
-        '@' : 1, '．':1
+        '@' : 1, '(':6
     }
     ori_len = len(article_doc)
-    
     offset_map = np.array([0], dtype=np.int)
 
     article_doc = article_doc.replace('医师：', '_')
@@ -70,18 +70,8 @@ def romove_redundant_str(article_doc, dev_mode=False):
     article_doc = article_doc.replace('个管师：', '*')
     article_doc = article_doc.replace('护理师：', '~')
     # article_doc = article_doc.replace('…', '@')
-    # article_doc = article_doc.replace('．', '(')
-    # article_doc = article_doc.replace('一', '1')
-    # article_doc = article_doc.replace('二', '2')
-    # article_doc = article_doc.replace('三', '3')
-    # article_doc = article_doc.replace('四', '4')
-    # article_doc = article_doc.replace('五', '5')
-    # article_doc = article_doc.replace('六', '6')
-    # article_doc = article_doc.replace('七', '7')
-    # article_doc = article_doc.replace('八', '8')
-    # article_doc = article_doc.replace('九', '9')
-
-
+    # article_doc = article_doc.replace('．．．．．．', '(')
+  
     for word in article_doc:
         if word in str_len.keys():
             if dev_mode:
@@ -96,7 +86,6 @@ def romove_redundant_str(article_doc, dev_mode=False):
             offset_map = np.append(offset_map, offset_map[-1])
 
     # delete init value
-
     if dev_mode:
         article_doc = article_doc.replace('_', '')
         article_doc = article_doc.replace('*', '')
@@ -108,6 +97,7 @@ def romove_redundant_str(article_doc, dev_mode=False):
     offset_map = np.delete(offset_map, 0)
     return article_doc, offset_map
 
+token_continual_number = False
 
 def preprocess_input(trainingset, position):
     # position is array like [article_id, start_pos, end_pos, type]
@@ -136,8 +126,6 @@ def preprocess_input(trainingset, position):
                     label_queue = list(map(
                         lambda ele: f'B-{ele[1]}' if ele[0]==0 \
                         else f'I-{ele[1]}', enumerate(label_queue)))
-
-
                     label_position += 5
                 else:
                     if times ==1:
@@ -160,6 +148,9 @@ def preprocess_input(trainingset, position):
                 
                     label_position += 5
             tag = 'O' if not label_queue else label_queue.pop(0)
+            if word == '…' or word == '．．．':
+                continue 
+            
             clean_sentences += word
             label_per_doc.append(tag)
 
@@ -231,10 +222,16 @@ def split_to_sentence(data:List[str], input_id_types, max_len, tags=None):
 
 def cut_words(texts:List[str]) -> List[List[str]]:
     word_array = []
+    tmp = ''
     for sentences in texts:
         cut_sentences = []
-        for word in sentences:
-            cut_sentences.append(word)
+        for idx, word in enumerate(sentences):
+            # if the last element of sentence and self is number
+            # concat to that
+            if token_continual_number and sentences[idx-1].isdigit() and word.isdigit():
+                cut_sentences[-1] += word
+            else:
+                cut_sentences.append(word)
 
         word_array.append(cut_sentences)
     return word_array
@@ -414,6 +411,7 @@ def write_ds(outfile, texts, tags, split_sen=True):
         for idx, word in enumerate(doc):
             if word == ' ':
                 continue
+            # print(word, tags[a_id][idx])
             out += f'{word}\t{tags[a_id][idx]}\n' 
         # if (len(doc) < 20):
         #     print(len(doc))
@@ -483,11 +481,13 @@ model_type = {
         'location', 'education',
         'name', 'profession', 
     ],
-    'default' : []
+    'default' : [],
+    'time' : ['time'],
 }
 aug_size = 3
 model_teamwork = False
-remove_sentence_with_allO = True
+remove_sentence_with_allO = False
+use_pseudo = True
 
 if __name__ == "__main__":
     '''
@@ -515,16 +515,27 @@ if __name__ == "__main__":
         trainingset, position, labels = loadInputFile(fpath, filter_type=filter_type)
     else:
         trainingset, position, labels = loadInputFile(fpath, filter_type=[])
-        
+    
     texts, tags, input_id_types = preprocess_input(trainingset, position)
     texts, tags, _ = split_to_sentence(texts, input_id_types, max_len, tags)
     
-    print('Using label:', set(list(labels.values())))
-    print('Origin sentence...', len(texts))
+   
     
+    
+    if use_pseudo:
+        pseudo_set, pseudo_pos, _ = loadInputFile('./data/pseudo_data.txt', filter_type=[])
+        pseudo_text, pseudo_tag, _ = preprocess_input(pseudo_set, pseudo_pos)
+        pseudo_text, pseudo_tag =filter_Otexts(pseudo_text, pseudo_tag, list(all_type))
+        pseudo_text, pseudo_tag, _ = split_to_sentence(pseudo_text, None, max_len, pseudo_tag)
+        texts += pseudo_text
+        tags += pseudo_tag
+        # trainingset += pseudo_set
+        # position += pseudo_pos
     texts = np.array(texts, dtype=object)
     tags = np.array(tags, dtype=object)
 
+    print('Using label:', set(list(labels.values())))
+    print('Origin sentence...', len(texts))
     # Kfold split
     kf = ShuffleSplit(n_splits=5, test_size=0.2, random_state=0)
     
@@ -534,7 +545,6 @@ if __name__ == "__main__":
         if remove_sentence_with_allO:
             orgin_train, orgin_tags = filter_Otexts(orgin_train, orgin_tags, list(all_type))
             print('Sentence with valid tags', len(texts))
-
 
 
         print(f'--------Fold {idx}----------')
