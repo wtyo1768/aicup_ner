@@ -6,7 +6,7 @@ from fastNLP import DataSet
 from utils import get_bigrams
 import os
 import sys
-from src.dataset import romove_redundant_str, split_to_sentence, all_type
+from src.dataset import romove_redundant_str, split_to_sentence
 from src.predict import load_dev
 from paths import *
 import jieba
@@ -14,12 +14,18 @@ import jieba.posseg as pseg
 from src.dataset import model_type, HANDLE, model_teamwork, all_type, few_type, tagging_method
 
 
+
+
 def get_label_vocab(data_type):
     
     if model_teamwork:
         label = model_type[HANDLE]
     else:
-        label = list(all_type - few_type)
+        label = [
+            'family', 'education', 'money',
+            'med_exam', 'ID', 'contact', 
+            'name', 'time', 'location', 'profession'
+        ]
     # label = [
     #     'money', 'education', 'name',
     #     'time', 'family', 'med_exam',
@@ -31,8 +37,11 @@ def get_label_vocab(data_type):
         total_label.extend([prefix+'-' + ele for ele in label])
     total_label.append('O')
     print(total_label)
+    label_ds = DataSet({'target':total_label})
     label_vocab = Vocabulary(unknown=None, padding=None)
-    label_vocab.add_word_lst(total_label) 
+    label_vocab.from_dataset(label_ds, field_name='target')
+    label_vocab.index_dataset(label_ds, field_name='target')
+    # label_vocab.add_word_lst(total_label) 
     return label_vocab
 
 @cache_results(_cache_fp='cache/aicupNER_uni+bi', _refresh=True)
@@ -159,13 +168,16 @@ def get_pos_tag(sen):
     
 
 if __name__ == "__main__":
+    
+    label = get_label_vocab(data_type='default')
+    print(label)
+    exit()
     dev_path = os.path.join(aicup_ner_path, f'fold{0}', f'dev/number')
-    print('-----------------xxDataset---------------------')
+    print('-----------------Dataset---------------------')
     loader = ConllLoader(['chars', 'target'])
 
     dev = loader.load(dev_path)
     print(dev.datasets['train'])
-    pass
     # label_vocab = get_label_vocab('number)
     # print(label_vocab)
     # print(list(label_vocab))

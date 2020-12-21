@@ -690,6 +690,8 @@ if args.status == 'train':
             f'./pred/pred{args.fold}.npy', 
             vocabs['label']
         )
+        print('-----------VOCAB------------')
+        print(list(vocabs['target']))
         write_pred_tsv(pred)
     
 elif args.status == 'bagging':
@@ -764,7 +766,7 @@ else:
     pred = model.predict(
         datasets['aicup_dev'],
         seq_len_field_name='seq_len',
-    )    
+    )
     pred = pred['pred']
 
     pred_num = [int(ele) for sublist in pred for ele in sublist]
