@@ -138,7 +138,7 @@ def convert_pred_and_write(pred, out_path, vocabs):
         dev_data[idx], map_arr = romove_redundant_str(dev_data[idx], dev_mode=True)
         offset_map.append(map_arr)
 
-    pred = [vocabs.to_word(ele) for ele in pred]
+    # pred = [vocabs.to_word(ele) for ele in pred]
     pred_per_article = split_to_pred_per_article([pred], count_article_length(dev_data))
     
     with open(out_path, 'wb') as f:

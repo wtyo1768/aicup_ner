@@ -34,7 +34,7 @@ if __name__ == "__main__":
         dev_data[idx], map_arr = romove_redundant_str(dev_data[idx], dev_mode=True)
         offset_map.append(map_arr)
 
-    label_vocab = get_label_vocab()
+    label_vocab = get_label_vocab(data_type='default')
     pred = [label_vocab.to_word(ele) for ele in vote_result]
     pred_per_article = split_to_pred_per_article([pred], count_article_length(dev_data))
     print('writing file...')

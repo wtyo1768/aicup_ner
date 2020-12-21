@@ -19,11 +19,11 @@ python3 flat_main.py \
     --fix_bert_epoch 1 \
     --epoch 10 \
     --batch 16 \
-    --status 'train' \
+    --status 'test' \
     --lexicon_name 'lk' \
     --bigram_min_freq 1 \
     --embed_lr_rate 1.3 \
-    --fold 3 \
+    --fold 4 \
     --use_abs_pos false \
     --use_rel_pos true \
     --do_pred 1 \

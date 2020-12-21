@@ -13,6 +13,8 @@ import math
 import copy
 from utils import size2MB
 from utils import MyDropout
+from src.CRF import CRF
+
 
 def get_embedding(max_seq_len, embedding_dim, padding_idx=None, rel_pos_init=0):
     """Build sinusoidal embeddings.
@@ -541,9 +543,10 @@ class BERT_SeqLabel(nn.Module):
             self.hidden_size+self.pos_feats_size,
             self.label_size
         )
-        self.crf = get_crf_zero_init(self.label_size)
-        
         self.dropout = MyDropout(0.2)
+        self.crf = get_crf_zero_init(self.label_size)
+        # self.crf = CRF(num_tags=self.label_size, batch_first=True)
+               
 
     def forward(self, lattice, bigrams, seq_len, lex_num, pos_s, pos_e, pos_tag,
                 target=None, chars_target=None):
@@ -568,11 +571,14 @@ class BERT_SeqLabel(nn.Module):
         pred = self.output(encoded)
         if self.training:
             loss = self.crf(pred, target, mask).mean(dim=0)
+            # loss = self.crf(emissions=pred, tags=target, mask=mask).mean(dim=0)
             return {'loss': loss}
         else:
+            # pred = self.crf.decode(emissions=pred, mask=mask)
             pred, path = self.crf.viterbi_decode(pred, mask)
+            # print(pred.shape)
+            # print(pred.shape)
             result = {'pred': pred}
-
             return result
 
 

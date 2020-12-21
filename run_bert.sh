@@ -5,7 +5,7 @@ python3 flat_main.py \
     --dataset 'aicup' \
     --number_normalized 3 \
     --cv true \
-    --data_type 'time' \
+    --data_type 'default' \
     --layer 1 \
     --use_bigram 0 \
     --use_pos_tag 0 \

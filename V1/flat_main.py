@@ -686,7 +686,7 @@ if args.status == 'train':
             datasets['aicup_dev'],
             seq_len_field_name='seq_len',)['pred']
         convert_pred_and_write(
-            pred, 
+            pred,
             f'./pred/pred{args.fold}.npy', 
             vocabs['label']
         )
@@ -696,11 +696,11 @@ elif args.status == 'bagging':
     from voting import vote
 
     models_path = [
-        '/home/dy/flat-chinese-ner/model/fold0/2020-12-19-10-22-01/epoch-19_step-2964_f-0.756652.pt',
-        '/home/dy/flat-chinese-ner/model/fold1/2020-12-19-10-02-29/epoch-15_step-2355_f-0.738956.pt',
-        '/home/dy/flat-chinese-ner/model/fold2/2020-12-19-10-40-06/epoch-20_step-3140_f-0.730933.pt',
-        '/home/dy/flat-chinese-ner/model/fold3/2020-12-19-10-58-24/epoch-17_step-2669_f-0.794857.pt',
-        '/home/dy/flat-chinese-ner/model/fold4/2020-12-19-11-22-20/epoch-18_step-2844_f-0.758940.pt',
+        '/home/dy/flat-chinese-ner/model/default/fold0/2020-12-21-08-46-26/epoch-11_step-2002_f-0.769890.pt',
+        '/home/dy/flat-chinese-ner/model/default/fold1/2020-12-21-09-02-29/epoch-15_step-2730_f-0.776722.pt',
+        '/home/dy/flat-chinese-ner/model/default/fold2/2020-12-21-09-18-33/epoch-10_step-1810_f-0.769046.pt',
+        '/home/dy/flat-chinese-ner/model/default/fold3/2020-12-21-09-32-06/epoch-8_step-1456_f-0.788785.pt',
+        '/home/dy/flat-chinese-ner/model/default/fold4/2020-12-21-09-48-03/epoch-14_step-2548_f-0.769837.pt',
     ]
     for p in models_path:
         assert(os.path.isfile(p))
@@ -751,8 +751,14 @@ elif args.status == 'bagging':
     )
 
 else:
-    
-    mpath = '/home/dy/flat-chinese-ner/model/fold3/2020-12-20-00-44-38/epoch-32_step-5024_f-0.770772.pt'
+    models_path = [
+        '/home/dy/flat-chinese-ner/model/default/fold0/2020-12-21-08-46-26/epoch-11_step-2002_f-0.769890.pt',
+        '/home/dy/flat-chinese-ner/model/default/fold1/2020-12-21-09-02-29/epoch-15_step-2730_f-0.776722.pt',
+        '/home/dy/flat-chinese-ner/model/default/fold2/2020-12-21-09-18-33/epoch-10_step-1810_f-0.769046.pt',
+        '/home/dy/flat-chinese-ner/model/default/fold3/2020-12-21-09-32-06/epoch-8_step-1456_f-0.788785.pt',
+        '/home/dy/flat-chinese-ner/model/default/fold4/2020-12-21-09-48-03/epoch-14_step-2548_f-0.769837.pt',
+    ]
+    mpath = models_path[args.fold]
     print('predicting...')
     model = Predictor(torch.load(mpath, map_location=device))
     pred = model.predict(
@@ -760,4 +766,9 @@ else:
         seq_len_field_name='seq_len',
     )    
     pred = pred['pred']
+
+    pred_num = [int(ele) for sublist in pred for ele in sublist]
+    with open(f'./pred/pred{args.fold}.npy', 'wb') as f:
+                print(f'writing pred{args.fold}.npy...')    
+                np.save(f, np.array(pred_num))
     write_pred_tsv(pred)

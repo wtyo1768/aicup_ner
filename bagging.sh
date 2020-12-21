@@ -9,7 +9,7 @@ do
         --number_normalized 3 \
         --cv true \
         --use_pos_tag 0 \
-        --model_type 'many' \
+        --data_type 'default' \
         --use_bigram 0 \
         --layer 1 \
         --use_bert 1 \
@@ -17,18 +17,20 @@ do
         --weight_decay 0.02 \
         --after_bert 'mlp' \
         --warmup 0.1 \
-        --optim 'sgd' \
+        --optim 'adam' \
         --fix_bert_epoch 0 \
-        --epoch 20 \
+        --epoch 15 \
         --batch 16 \
         --status 'train' \
         --lexicon_name 'lk' \
         --bigram_min_freq 1 \
-        --embed_lr_rate 1.2 \
+        --embed_lr_rate 1.3 \
         --fold $i \
         --use_abs_pos false \
         --use_rel_pos true \
-        --do_pred 1
+        --do_pred 1 \
+        --crf_lr 0.1 \
+        --post 'n' \
 
     echo '|'-------fold$i--------'|'
 done    
