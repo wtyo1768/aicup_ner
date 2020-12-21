@@ -527,6 +527,7 @@ class BERT_SeqLabel(nn.Module):
         self.hidden_size = bert_embedding._embed_size
         self.use_pos_tag = use_pos_tag
         self.pos_feats_size = 0
+
         if self.use_pos_tag:
             self.pos_embed_size = len(list(vocabs['pos_tag']))
             self.pos_feats_size = 20
@@ -544,8 +545,8 @@ class BERT_SeqLabel(nn.Module):
             self.label_size
         )
         self.dropout = MyDropout(0.2)
-        self.crf = get_crf_zero_init(self.label_size)
-        # self.crf = CRF(num_tags=self.label_size, batch_first=True)
+        # self.crf = get_crf_zero_init(self.label_size)
+        self.crf = CRF(num_tags=self.label_size, batch_first=True)
                
 
     def forward(self, lattice, bigrams, seq_len, lex_num, pos_s, pos_e, pos_tag,
@@ -570,13 +571,12 @@ class BERT_SeqLabel(nn.Module):
         
         pred = self.output(encoded)
         if self.training:
-            loss = self.crf(pred, target, mask).mean(dim=0)
-            # loss = self.crf(emissions=pred, tags=target, mask=mask).mean(dim=0)
-            return {'loss': loss}
+            # loss = self.crf(pred, target, mask).mean(dim=0)
+            loss = self.crf(emissions=pred, tags=target, mask=mask).mean(dim=0)
+            return {'loss':-loss}
         else:
-            # pred = self.crf.decode(emissions=pred, mask=mask)
-            pred, path = self.crf.viterbi_decode(pred, mask)
-            # print(pred.shape)
+            pred = self.crf.decode(emissions=pred, mask=mask).squeeze(0)
+            # pred, path = self.crf.viterbi_decode(pred, mask)
             # print(pred.shape)
             result = {'pred': pred}
             return result

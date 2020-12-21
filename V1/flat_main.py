@@ -9,7 +9,7 @@ fitlog.set_rng_seed(load_dataset_seed)
 import sys
 sys.path.append('../')
 
-from src.dataset  import romove_redundant_str
+from src.dataset  import romove_redundant_str, write_ds
 from src.predict import load_dev, split_to_pred_per_article, write_result
 from src.predict import convert_pred_and_write, count_article_length
 from load_data import *
@@ -557,7 +557,6 @@ else:
     ]
 
 
-
 if args.optim == 'adam':
     optimizer = optim.AdamW(
         param_,
@@ -618,7 +617,7 @@ def create_cb():
     return callbacks
 
 
-def write_pred_tsv(pred):
+def write_pred_tsv(pred, ):
     pred = [int(ele) for sublist in pred for ele in sublist]
 
     dev_data = load_dev()
@@ -630,8 +629,10 @@ def write_pred_tsv(pred):
         offset_map.append(map_arr)
 
     pred = [vocabs['label'].to_word(ele) for ele in pred]
+
     pred_per_article = split_to_pred_per_article([pred], count_article_length(dev_data))
-    print('writing file...')
+    print('writing output.tsv file...')
+    
     write_result(dev_data, pred_per_article, offset_map, origin_data)
 
 
@@ -676,7 +677,7 @@ if args.status == 'train':
     target = [[vocabs['label'].to_word(ele) for ele in arr] for arr in target]
     cls_res = classification_report(target, pred)
 
-    visualize_error(datasets['dev'] ,target, pred)
+    visualize_error(datasets['dev'], target, pred)
     print(cls_res)
     print('=============================')
     # Prediction to aicup data
@@ -685,80 +686,22 @@ if args.status == 'train':
         pred = model.predict(
             datasets['aicup_dev'],
             seq_len_field_name='seq_len',)['pred']
+        print(pred[0][0:20])
         convert_pred_and_write(
             pred,
             f'./pred/pred{args.fold}.npy', 
             vocabs['label']
         )
-        print('-----------VOCAB------------')
-        print(list(vocabs['target']))
+        # print('-----------VOCAB------------')
+        # print(list(vocabs['target']))
         write_pred_tsv(pred)
-    
-elif args.status == 'bagging':
-    from voting import vote
-
-    models_path = [
-        '/home/dy/flat-chinese-ner/model/default/fold0/2020-12-21-08-46-26/epoch-11_step-2002_f-0.769890.pt',
-        '/home/dy/flat-chinese-ner/model/default/fold1/2020-12-21-09-02-29/epoch-15_step-2730_f-0.776722.pt',
-        '/home/dy/flat-chinese-ner/model/default/fold2/2020-12-21-09-18-33/epoch-10_step-1810_f-0.769046.pt',
-        '/home/dy/flat-chinese-ner/model/default/fold3/2020-12-21-09-32-06/epoch-8_step-1456_f-0.788785.pt',
-        '/home/dy/flat-chinese-ner/model/default/fold4/2020-12-21-09-48-03/epoch-14_step-2548_f-0.769837.pt',
-    ]
-    for p in models_path:
-        assert(os.path.isfile(p))
-    
-    all_pred = []
-    with torch.no_grad():
-        for path_num in range(len(models_path)):
-            print(f'loading model_{path_num}...')
-
-            '''這邊GET每個MODEL的PREDICTION'''
-            model = Predictor(
-                torch.load(models_path[path_num], 
-                map_location=device)
-            )
-            print('predicting...')
-            # pred shape: List[ numpy_ndarray]
-            pred = model.predict(
-                datasets['aicup_dev'],
-                seq_len_field_name='seq_len',
-            )['pred']
-            # flatten 
-            pred = [int(ele) for sublist in pred for ele in sublist]
-            with open(f'./pred/pred{path_num}.npy', 'wb') as f:
-                print(f'writing pred{path_num}.npy...')    
-                np.save(f, np.array(pred))
-            '''所有模型的答案都接上去'''
-            all_pred.append(pred)    
-            
-    vote_result = vote(all_pred)
-    
-    dev_data = load_dev()
-    origin_data = load_dev(simplify=False)
-
-    offset_map = []
-    for idx in range(len(dev_data)):
-        dev_data[idx], map_arr = romove_redundant_str(dev_data[idx], dev_mode=True)
-        offset_map.append(map_arr)
-
-    pred = [vocabs['label'].to_word(ele) for ele in vote_result]
-    pred_per_article = split_to_pred_per_article([pred], count_article_length(dev_data))
-    print('writing file...')
-    write_result(
-        dev_data, 
-        pred_per_article, 
-        offset_map, 
-        origin_data, 
-        output_path='./bagging.tsv'
-    )
-
 else:
     models_path = [
-        '/home/dy/flat-chinese-ner/model/default/fold0/2020-12-21-08-46-26/epoch-11_step-2002_f-0.769890.pt',
-        '/home/dy/flat-chinese-ner/model/default/fold1/2020-12-21-09-02-29/epoch-15_step-2730_f-0.776722.pt',
-        '/home/dy/flat-chinese-ner/model/default/fold2/2020-12-21-09-18-33/epoch-10_step-1810_f-0.769046.pt',
-        '/home/dy/flat-chinese-ner/model/default/fold3/2020-12-21-09-32-06/epoch-8_step-1456_f-0.788785.pt',
-        '/home/dy/flat-chinese-ner/model/default/fold4/2020-12-21-09-48-03/epoch-14_step-2548_f-0.769837.pt',
+        '/home/dy/Flat-Lattice-Transformer/model/default/fold0/2020-12-21-08-46-26/epoch-11_step-2002_f-0.769890.pt',
+        '/home/dy/Flat-Lattice-Transformer/model/default/fold1/2020-12-21-09-02-29/epoch-15_step-2730_f-0.776722.pt',
+        '/home/dy/Flat-Lattice-Transformer/model/default/fold2/2020-12-21-09-18-33/epoch-10_step-1810_f-0.769046.pt',
+        '/home/dy/Flat-Lattice-Transformer/model/default/fold3/2020-12-21-09-32-06/epoch-8_step-1456_f-0.788785.pt',
+        '/home/dy/Flat-Lattice-Transformer/model/default/fold4/2020-12-21-09-48-03/epoch-14_step-2548_f-0.769837.pt',
     ]
     mpath = models_path[args.fold]
     print('predicting...')

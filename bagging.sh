@@ -13,8 +13,8 @@ do
         --use_bigram 0 \
         --layer 1 \
         --use_bert 1 \
-        --only_bert 0 \
-        --weight_decay 0.02 \
+        --only_bert 1 \
+        --weight_decay 0.03 \
         --after_bert 'mlp' \
         --warmup 0.1 \
         --optim 'adam' \
@@ -24,7 +24,7 @@ do
         --status 'train' \
         --lexicon_name 'lk' \
         --bigram_min_freq 1 \
-        --embed_lr_rate 1.3 \
+        --embed_lr_rate 0.7 \
         --fold $i \
         --use_abs_pos false \
         --use_rel_pos true \

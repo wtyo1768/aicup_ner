@@ -6,12 +6,12 @@ from fastNLP import DataSet
 from utils import get_bigrams
 import os
 import sys
-from src.dataset import romove_redundant_str, split_to_sentence
+from src.dataset import romove_redundant_str, split_to_sentence, all_type, few_type
 from src.predict import load_dev
 from paths import *
 import jieba
 import jieba.posseg as pseg
-from src.dataset import model_type, HANDLE, model_teamwork, all_type, few_type, tagging_method
+from src.dataset import model_type, HANDLE, model_teamwork, tagging_method
 
 
 
@@ -76,7 +76,7 @@ def load_aicup_ner(
     }
     ds['aicup_dev'] = get_aicup_devds()
     
-    jieba.enable_paddle()   
+    # jieba.enable_paddle()   
     for ds_name in ds.keys():
         ds[ds_name].apply_field(get_bigrams, 'chars', 'bigrams')
         ds[ds_name].add_seq_len('chars', new_field_name='seq_len')
