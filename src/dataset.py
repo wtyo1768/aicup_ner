@@ -6,17 +6,17 @@ import numpy as np
 import torch
 import sys
 import opencc
+from fastNLP import Vocabulary, DataSet
 
 
 max_len=128
-tagging_method = 'BI'
+tagging_method = 'BIES'
 #TODO
 token_continual_number = False
 USE_ALL_DATA_FOR_TRAIN = False
 fpath = '/home/dy/Flat-Lattice-Transformer/data/train_2.txt'
 role_map = {
     '_' : 0, '*' : 1,
-
 }
 all_type = {
     'med_exam', 'money', 'contact', 'family',
@@ -26,6 +26,34 @@ all_type = {
 few_type = {
     'others', 'organization', 'clinical_event', 
 }
+
+def get_label_vocab(data_type='default'):
+    
+    label = [
+            'family', 'education', 'money',
+            'med_exam', 'ID', 'contact', 
+            'name', 'time', 'location', 'profession'
+    ]
+    # label = [
+    #     'money', 'education', 'name',
+    #     'time', 'family', 'med_exam',
+    #     'contact', 'location', 'ID', 'profession'
+    # ]
+    total_label = []
+    
+    for prefix in tagging_method:
+        total_label.extend([prefix+'-' + ele for ele in label])
+    total_label.append('O')
+    print(total_label)
+    label_ds = DataSet({'target':total_label})
+    label_vocab = Vocabulary(unknown=None, padding=None)
+    label_vocab.from_dataset(label_ds, field_name='target')
+    label_vocab.index_dataset(label_ds, field_name='target')
+    # label_vocab.add_word_lst(total_label) 
+    return label_vocab
+
+
+label_vocab = get_label_vocab()
 
 
 def loadInputFile(path, filter_type=[]):  
@@ -97,7 +125,7 @@ def romove_redundant_str(article_doc, dev_mode=False):
     return article_doc, offset_map
 
 
-def preprocess_input(trainingset, position):
+def preprocess_input(trainingset, position, add_prefix=True):
     # position is array like [article_id, start_pos, end_pos, type]
     label_position = 0
     input_id_types = []
@@ -120,32 +148,32 @@ def preprocess_input(trainingset, position):
                 times = int(position[label_position + 2]) - int(position[label_position + 1])
                 label = position[label_position + 4]
                 label_queue.extend([label]*times)
-                
-                if tagging_method == 'BI':
-                    label_queue = list(map(
-                        lambda ele: f'B-{ele[1]}' if ele[0]==0 \
-                        else f'I-{ele[1]}', enumerate(label_queue)))
-                else:
-                    if times ==1:
-                        label_queue = ['S-'+label]
-                    elif times ==2:
+                # Add the BIO or BIOES tagging prefix to label
+                if add_prefix:
+                    if tagging_method == 'BI':
                         label_queue = list(map(
                             lambda ele: f'B-{ele[1]}' if ele[0]==0 \
-                            else f'E-{ele[1]}', enumerate(label_queue)
-                        ))
+                            else f'I-{ele[1]}', enumerate(label_queue)))
                     else:
-                        label_queue_tmp = []
-                        for i in range(len(label_queue)):
-                            if i == 0:
-                                label_queue_tmp.append(f'B-{label}')
-                            elif i == len(label_queue)-1:
-                                label_queue_tmp.append(f'E-{label}')
-                            else:
-                                label_queue_tmp.append(f'I-{label}')
-                        label_queue = label_queue_tmp.copy()
+                        if times ==1:
+                            label_queue = ['S-'+label]
+                        elif times ==2:
+                            label_queue = list(map(
+                                lambda ele: f'B-{ele[1]}' if ele[0]==0 \
+                                else f'E-{ele[1]}', enumerate(label_queue)
+                            ))
+                        else:
+                            label_queue_tmp = []
+                            for i in range(len(label_queue)):
+                                if i == 0:
+                                    label_queue_tmp.append(f'B-{label}')
+                                elif i == len(label_queue)-1:
+                                    label_queue_tmp.append(f'E-{label}')
+                                else:
+                                    label_queue_tmp.append(f'I-{label}')
+                            label_queue = label_queue_tmp.copy()
                 label_position += 5
-            # else:
-            #     print(idx, int(position[label_position + 1]))
+
             tag = 'O' if not label_queue else label_queue.pop(0)
             # if word == '…' or word == '．．．':
             #     continue 
@@ -160,7 +188,7 @@ def preprocess_input(trainingset, position):
     return clean_docs, label_doc, input_id_types
 
 
-def split_to_sentence(data:List[str], input_id_types, max_len, tags=None):
+def split_to_sentence(data:List[str], input_id_types, max_len, tags=None, cut=True):
     # 2 is num of special token added by tokenizer
     max_len = max_len - 2 
     break_word = ['。', '，', '!']
@@ -193,7 +221,8 @@ def split_to_sentence(data:List[str], input_id_types, max_len, tags=None):
                 sentence += tmp
                 tmp = ''
     # cut string to word array
-    small_doc = cut_words(small_doc, tags)
+    if cut:
+        small_doc = cut_words(small_doc, tags)
     
     # cut input_id_types
     type_tensor = []
@@ -237,27 +266,6 @@ def cut_words(texts:List[str], tags=None) -> List[List[str]]:
     return word_array
     
 
-def val_split(texts, tags, input_id_types, cv=False):
-    from sklearn.model_selection import train_test_split
-    
-
-    SPLIT = 0.5
-    #  this block is use for upload dev data to ai-cup platform 
-    if USE_ALL_DATA_FOR_TRAIN:
-        texts, tags = zip(*shuffle(list(zip(texts, tags))))
-        return texts, tags, input_id_types, None, None, None
-
-    text_ds = np.array(list(zip(texts, input_id_types)), dtype=object)
-    # print(tags)
-    if cv: SPLIT = .2
-    train_texts, val_texts, train_tags, val_tags = train_test_split(text_ds, tags, test_size=SPLIT)
-
-    if cv: return train_texts, val_texts, train_tags, val_tags
-
-    val_texts, test_texts, val_tags, test_tags = train_test_split(val_texts, val_tags, test_size=.5)
-    return train_texts, train_tags, val_texts, val_tags, test_texts, test_tags
-
-
 def encode_data(
     texts,
     token_type_ids,
@@ -273,7 +281,6 @@ def encode_data(
         kargs.get('pretrained'),
         padding_side='right',
     )
-    print(texts[0])
     encodings = tokenizer(
         texts,
         is_split_into_words=True,
@@ -298,15 +305,15 @@ def encode_data(
         encodings['token_type_ids'] = token_type_ids
 
     if text_tags:
-        labels = [[tag2id[tag] for tag in doc] for doc in text_tags]
+        labels = [[label_vocab.to_index(tag) for tag in doc] for doc in text_tags]
         # padding the label
         for i, batch_label in enumerate(labels):
             # CLS 
-            batch_label = [tag2id[PAD_TOKEN]] + batch_label 
+            batch_label = [label_vocab.to_index(PAD_TOKEN)] + batch_label 
             # SEP 
-            batch_label.append(tag2id[PAD_TOKEN]) 
+            batch_label.append(label_vocab.to_index(PAD_TOKEN)) 
             # PAD 
-            batch_label.extend([tag2id[PAD_TOKEN]] *(max_len - len(batch_label)))
+            batch_label.extend([label_vocab.to_index(PAD_TOKEN)] *(max_len - len(batch_label)))
             labels[i] = batch_label
             assert(max_len == len(batch_label) == len(encodings['input_ids'][i]))
         return encodings, labels
@@ -334,28 +341,25 @@ class AICupDataset(torch.utils.data.Dataset):
 
 def get_dataset(**kargs):
     trainingset, position, _ = loadInputFile(fpath)
+    from sklearn.model_selection import train_test_split
 
     texts, tags, input_id_types = preprocess_input(trainingset, position)
     texts, tags, input_id_types = split_to_sentence(texts, input_id_types, kargs.get('max_len'), tags=tags,)
-    train_texts_ds, train_tags, val_texts_ds, val_tags, test_texts_ds, test_tags = val_split(texts, tags, input_id_types)
 
-    train_texts, train_input_id_types = zip(*train_texts_ds)
-    val_texts, val_input_id_types = zip(*val_texts_ds)
-    test_texts, test_input_id_types = zip(*test_texts_ds)
-    train_texts, val_texts, test_texts = list(train_texts), list(val_texts), list(test_texts)
-    train_encodings, train_labels = encode_data(train_texts, train_input_id_types, train_tags, **kargs)
+
+    train_texts, val_texts, train_tags, val_tags = train_test_split(texts, tags, test_size=.2)
+
+    # train_texts, train_input_id_types = zip(*train_texts_ds)
+    # val_texts, val_input_id_types = zip(*val_texts_ds)
+    # test_texts, test_input_id_types = zip(*test_texts_ds)
+    # train_texts, val_texts, test_texts = list(train_texts), list(val_texts), list(test_texts)
+    train_encodings, train_labels = encode_data(train_texts, None, train_tags, **kargs)
     train_dataset = AICupDataset(train_encodings, train_labels)
-    # this block is used to upload data to ai cup platform
-    if USE_ALL_DATA_FOR_TRAIN:
-        return train_dataset, None, None
-
-    val_encodings, val_labels = encode_data(val_texts, val_input_id_types, val_tags, **kargs)
+    
+    val_encodings, val_labels = encode_data(val_texts, None, val_tags, **kargs)
     val_dataset = AICupDataset(val_encodings, val_labels)
 
-    test_encodings, test_labels = encode_data(test_texts, test_input_id_types, test_tags, **kargs)
-    test_dataset = AICupDataset(test_encodings, test_labels)
-
-    return train_dataset, val_dataset, test_dataset
+    return train_dataset, val_dataset
 
 
 def generate_type_id(doc, offset_map):
@@ -368,29 +372,6 @@ def generate_type_id(doc, offset_map):
             if offset_map[idx] == offset:
                 type_id.append(role_map[role])
     return type_id
-
-
-def get_label(path='/home/dy/Flat-Lattice-Transformer/data/train_2.txt'):
-    labels = list()
-    with open(path, 'r', encoding='utf8') as f:
-        file_text=f.read().encode('utf-8').decode('utf-8-sig')
-    datas=file_text.split('\n\n--------------------\n\n')[:-1]
-    for data in datas:
-        data=data.split('\n')
-        annotations=data[1:]
-        for annot in annotations[1:]:
-            annot=annot.split('\t')
-            labels.append(annot[4])
-
-    unique_labels = list(set(labels))
-    tagging_labels = []
-
-    if tagging_method == 'BI':
-        for label in unique_labels:
-            for prefix in tagging_method:
-                tagging_labels.append(f'{prefix}-{label}')
-    tagging_labels.append('O')
-    return tagging_labels
 
 
 def fix_BIOES_tag(fix_tag):
@@ -421,10 +402,6 @@ def write_ds(outfile, texts, tags, split_sen=True):
     
     with open(outfile, 'w+' ,encoding='utf-8') as f:
         f.write(out)
-
-
-tag2id = {tag: id for id, tag in enumerate(get_label())}
-id2tag = {id: tag for tag, id in tag2id.items()}
 
 
 def filter_Otexts(texts, tags, aug_type):
@@ -532,8 +509,7 @@ if __name__ == "__main__":
         pseudo_text, pseudo_tag, _ = split_to_sentence(pseudo_text, None, max_len, pseudo_tag)
         texts += pseudo_text
         tags += pseudo_tag
-        # trainingset += pseudo_set
-        # position += pseudo_pos
+
     texts = np.array(texts, dtype=object)
     tags = np.array(tags, dtype=object)
 

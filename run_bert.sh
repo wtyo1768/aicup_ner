@@ -12,6 +12,7 @@ python3 flat_main.py \
     --lattice 1 \
     --use_bert 1 \
     --only_bert 1 \
+    --pred_dir 'bert' \
     --weight_decay 0.03 \
     --after_bert 'mlp' \
     --warmup 0.1 \

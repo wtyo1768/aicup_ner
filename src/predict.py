@@ -1,6 +1,6 @@
 from typing import Dict, List, Tuple
-from dataset  import encode_data, AICupDataset, id2tag, split_to_sentence
-from dataset  import romove_redundant_str, generate_type_id
+from src.dataset  import encode_data, AICupDataset, split_to_sentence
+from src.dataset  import romove_redundant_str, generate_type_id, get_label_vocab
 from seqeval.metrics.sequence_labeling import get_entities
 import numpy as np
 import pandas as pd
@@ -40,9 +40,9 @@ def align_predict(preditions, argmax=True):
         argmax
     else:
         pred = preditions
-
+    label_vocab = get_label_vocab()
     pred_tag = [list(
-       map(lambda ele: id2tag[ele] ,line)
+       map(lambda ele: label_vocab.to_word(ele) ,line)
     ) for line in pred]
 
     # doc_result = np.array(split_docs).flatten()

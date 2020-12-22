@@ -49,7 +49,7 @@ parser = argparse.ArgumentParser()
 # performance inrelevant
 parser.add_argument('--cv',type=bool,default=False)
 parser.add_argument('--crf_lr',type=float,default=0.1)
-
+parser.add_argument('--pred_dir',type=str,required=True)
 parser.add_argument('--data_type',type=str,default='few')
 parser.add_argument('--fold',type=int,default=0)
 parser.add_argument('--use_pos_tag', type=int, default=0, required=True)
@@ -485,8 +485,8 @@ if args.status=='train':
         print_info('{}init pram{}'.format('*' * 15, '*' * 15))
 
 loss = LossInForward()
-# encoding_type = 'bioes'
-encoding_type = 'bio'
+encoding_type = 'bioes'
+# encoding_type = 'bio'
 f1_metric = SpanFPreRecMetric(
     vocabs['label'],
     pred='pred',
@@ -689,7 +689,7 @@ if args.status == 'train':
             seq_len_field_name='seq_len',)['pred']
         convert_pred_and_write(
             pred,
-            f'./pred/pred{args.fold}.npy', 
+            f'../pred/{args.pred_dir}/{args.fold}.npy', 
             vocabs['label']
         )
         write_pred_tsv(pred)

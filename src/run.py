@@ -3,7 +3,7 @@ from transformers import Trainer, TrainingArguments
 from transformers import AutoConfig, EvalPrediction
 from seqeval.metrics import accuracy_score, f1_score, precision_score, recall_score
 from seqeval.metrics import classification_report
-from dataset  import get_dataset, get_label, id2tag, tag2id
+from dataset  import get_dataset, get_label_vocab
 from typing import Dict, List, Tuple
 from torch import nn
 from model import Bert_CRF, Bert_BiLSTM_CRF
@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 import torch
 import argparse
+
 
 #%%
 def align_predictions(predictions, label_ids) -> Tuple[List[int], List[int]]:
@@ -47,7 +48,7 @@ def process_command():
     parser.add_argument('--max_seq_length', type=int, required=True,)
     parser.add_argument('--num_train_epochs', type=int, required=True,)
     parser.add_argument('--num_train_batchs', type=int, required=True,)
-    parser.add_argument('--use_type_id', required=False, action='store_true')
+    parser.add_argument('--use_type_id', default=False, required=False, action='store_true')
     parser.add_argument('--train_on_all_data', required=False, action='store_true')
 
     parser.add_argument('--silent', '-s', required=False, action='store_true')
@@ -66,8 +67,9 @@ if __name__ == "__main__":
         pretrained=args.model_name_or_path,
         train_on_all_data=args.train_on_all_data
     )
-    unique_tags = get_label()
-    label_map = id2tag
+    label_vocab = get_label_vocab()
+    unique_tags = list(label_vocab)
+    # label_map = id2tag
     num_labels = len(unique_tags)
     model = {
         'CRF':Bert_CRF,
@@ -95,8 +97,8 @@ if __name__ == "__main__":
     config = AutoConfig.from_pretrained(
         args.model_name_or_path,
         num_labels=num_labels,
-        id2label=label_map,
-        label2id=tag2id,
+        # id2label=label_map,
+        # label2id=tag2id,
         num_hidden_layers=10,
         type_vocab_size=2,
         # hidden_dropout_prob=.2
@@ -122,7 +124,7 @@ if __name__ == "__main__":
         # output_dict=True
     )    
     print(report)
-    if False
+    if False:
         from predict import pred_and_write
         pred_and_write(trainer, args.model_name_or_path)
 

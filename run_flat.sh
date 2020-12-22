@@ -12,17 +12,18 @@ python3 flat_main.py \
     --lattice 1 \
     --use_bert 1 \
     --only_bert 0 \
+    --pred_dir 'flat' \
     --weight_decay 0.03 \
     --after_bert 'mlp' \
     --warmup 0.1 \
     --optim 'adam' \
     --fix_bert_epoch 1 \
-    --epoch 10 \
+    --epoch 15 \
     --batch 16 \
     --status 'train' \
     --lexicon_name 'lk' \
     --bigram_min_freq 1 \
-    --embed_lr_rate 0.5 \
+    --embed_lr_rate 1.3 \
     --fold 4 \
     --use_abs_pos false \
     --use_rel_pos true \
