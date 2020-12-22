@@ -273,6 +273,7 @@ def encode_data(
         kargs.get('pretrained'),
         padding_side='right',
     )
+    print(texts[0])
     encodings = tokenizer(
         texts,
         is_split_into_words=True,
@@ -341,7 +342,7 @@ def get_dataset(**kargs):
     train_texts, train_input_id_types = zip(*train_texts_ds)
     val_texts, val_input_id_types = zip(*val_texts_ds)
     test_texts, test_input_id_types = zip(*test_texts_ds)
-    
+    train_texts, val_texts, test_texts = list(train_texts), list(val_texts), list(test_texts)
     train_encodings, train_labels = encode_data(train_texts, train_input_id_types, train_tags, **kargs)
     train_dataset = AICupDataset(train_encodings, train_labels)
     # this block is used to upload data to ai cup platform
@@ -484,10 +485,10 @@ model_type = {
     'default' : [],
     'time' : ['time'],
 }
-aug_size = 3
+aug_size = 0
 model_teamwork = False
 remove_sentence_with_allO = False
-use_pseudo = False
+use_pseudo = True
 
 if __name__ == "__main__":
     '''

@@ -3,7 +3,7 @@ from transformers import Trainer, TrainingArguments
 from transformers import AutoConfig, EvalPrediction
 from seqeval.metrics import accuracy_score, f1_score, precision_score, recall_score
 from seqeval.metrics import classification_report
-from src.dataset  import get_dataset, get_label, id2tag, tag2id
+from dataset  import get_dataset, get_label, id2tag, tag2id
 from typing import Dict, List, Tuple
 from torch import nn
 from model import Bert_CRF, Bert_BiLSTM_CRF
@@ -113,19 +113,16 @@ if __name__ == "__main__":
         compute_metrics=compute_metrics,
     )
     trainer.train()
-#%%
-    if not args.train_on_all_data:
-        pred = trainer.predict(test_dataset, )
-        y_true, y_pred = align_predictions(pred.predictions, pred.label_ids)
-
-        report = classification_report(
-            y_true, 
-            y_pred, 
-            # output_dict=True
-        )    
-                
-        print(report)
-    else:
+    # Evaluate
+    pred = trainer.predict(val_dataset, )
+    y_true, y_pred = align_predictions(pred.predictions, pred.label_ids)
+    report = classification_report(
+        y_true, 
+        y_pred, 
+        # output_dict=True
+    )    
+    print(report)
+    if False
         from predict import pred_and_write
         pred_and_write(trainer, args.model_name_or_path)
 

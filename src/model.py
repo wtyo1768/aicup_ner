@@ -1,5 +1,5 @@
-from transformers.modeling_bert import BertPreTrainedModel
-from transformers.modeling_bert import BertModel
+from transformers.models.bert.modeling_bert import BertPreTrainedModel
+from transformers.models.bert.modeling_bert import BertModel
 from typing import List, Optional
 import torch.nn as nn
 from CRF import CRF

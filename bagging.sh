@@ -13,13 +13,13 @@ do
         --use_bigram 0 \
         --layer 1 \
         --use_bert 1 \
-        --only_bert 1 \
+        --only_bert 0 \
         --weight_decay 0.03 \
         --after_bert 'mlp' \
         --warmup 0.1 \
         --optim 'adam' \
-        --fix_bert_epoch 0 \
-        --epoch 5 \
+        --fix_bert_epoch 1 \
+        --epoch 15 \
         --batch 16 \
         --status 'train' \
         --lexicon_name 'lk' \
