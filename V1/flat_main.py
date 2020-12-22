@@ -398,8 +398,8 @@ if args.model == 'transformer':
                 vocabs['lattice'],
                 model_dir_or_name='cn-wwm',
                 requires_grad=False,
-                word_dropout=0.02,
-                layers='-1',
+                word_dropout=0.05,
+                layers='-1, -3',
             )
         else:
             bert_embedding = None
@@ -633,7 +633,7 @@ def write_pred_tsv(pred, ):
     pred_per_article = split_to_pred_per_article([pred], count_article_length(dev_data))
     print('writing output.tsv file...')
     
-    write_result(dev_data, pred_per_article, offset_map, origin_data)
+    write_result(dev_data, pred_per_article, offset_map, origin_data, output_path='../pred/output.tsv')
 
 
 def visualize_error(ds, target, pred):
