@@ -14,8 +14,6 @@ import jieba.posseg as pseg
 from src.dataset import model_type, HANDLE, model_teamwork, tagging_method, max_len
 
 
-
-
 def get_label_vocab(data_type):
     
     if model_teamwork:

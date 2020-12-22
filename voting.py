@@ -4,9 +4,9 @@ from src.predict import load_dev, split_to_pred_per_article, write_result, count
 from aicup_dataset import get_label_vocab
 
 def vote(all_pred):
-    # print(all_pred[0][0:10])
-    # print(all_pred[1][0:10])
-    # print(all_pred[2][0:10])
+    print(all_pred[0][0:10])
+    print(all_pred[1][0:10])
+    print(all_pred[2][0:10])
 
     staked_pred = np.column_stack(all_pred)
     print('stacked pred_shape:', staked_pred.shape)
@@ -35,6 +35,7 @@ if __name__ == "__main__":
         offset_map.append(map_arr)
 
     label_vocab = get_label_vocab(data_type='default')
+    print(label_vocab.to_word(20))
     pred = [label_vocab.to_word(ele) for ele in vote_result]
     pred_per_article = split_to_pred_per_article([pred], count_article_length(dev_data))
     print('writing file...')

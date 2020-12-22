@@ -9,11 +9,11 @@ import opencc
 
 
 max_len=128
-tagging_method = 'BI'
+tagging_method = 'BIES'
 #TODO
 token_continual_number = False
 USE_ALL_DATA_FOR_TRAIN = False
-fpath = '/home/dy/Flat-Lattice-Transformer/data/train_2.txt'
+fpath = '/home/dy/flat-chinese-ner/data/train_2.txt'
 role_map = {
     '_' : 0, '*' : 1,
 
@@ -97,7 +97,7 @@ def romove_redundant_str(article_doc, dev_mode=False):
     return article_doc, offset_map
 
 
-def preprocess_input(trainingset, position):
+def preprocess_input(trainingset, position, add_prefix=True):
     # position is array like [article_id, start_pos, end_pos, type]
     label_position = 0
     input_id_types = []
@@ -120,32 +120,32 @@ def preprocess_input(trainingset, position):
                 times = int(position[label_position + 2]) - int(position[label_position + 1])
                 label = position[label_position + 4]
                 label_queue.extend([label]*times)
-                
-                if tagging_method == 'BI':
-                    label_queue = list(map(
-                        lambda ele: f'B-{ele[1]}' if ele[0]==0 \
-                        else f'I-{ele[1]}', enumerate(label_queue)))
-                else:
-                    if times ==1:
-                        label_queue = ['S-'+label]
-                    elif times ==2:
+                # Add the BIO or BIOES tagging prefix to label
+                if add_prefix:
+                    if tagging_method == 'BI':
                         label_queue = list(map(
                             lambda ele: f'B-{ele[1]}' if ele[0]==0 \
-                            else f'E-{ele[1]}', enumerate(label_queue)
-                        ))
+                            else f'I-{ele[1]}', enumerate(label_queue)))
                     else:
-                        label_queue_tmp = []
-                        for i in range(len(label_queue)):
-                            if i == 0:
-                                label_queue_tmp.append(f'B-{label}')
-                            elif i == len(label_queue)-1:
-                                label_queue_tmp.append(f'E-{label}')
-                            else:
-                                label_queue_tmp.append(f'I-{label}')
-                        label_queue = label_queue_tmp.copy()
+                        if times ==1:
+                            label_queue = ['S-'+label]
+                        elif times ==2:
+                            label_queue = list(map(
+                                lambda ele: f'B-{ele[1]}' if ele[0]==0 \
+                                else f'E-{ele[1]}', enumerate(label_queue)
+                            ))
+                        else:
+                            label_queue_tmp = []
+                            for i in range(len(label_queue)):
+                                if i == 0:
+                                    label_queue_tmp.append(f'B-{label}')
+                                elif i == len(label_queue)-1:
+                                    label_queue_tmp.append(f'E-{label}')
+                                else:
+                                    label_queue_tmp.append(f'I-{label}')
+                            label_queue = label_queue_tmp.copy()
                 label_position += 5
-            # else:
-            #     print(idx, int(position[label_position + 1]))
+
             tag = 'O' if not label_queue else label_queue.pop(0)
             # if word == '…' or word == '．．．':
             #     continue 
@@ -160,7 +160,7 @@ def preprocess_input(trainingset, position):
     return clean_docs, label_doc, input_id_types
 
 
-def split_to_sentence(data:List[str], input_id_types, max_len, tags=None):
+def split_to_sentence(data:List[str], input_id_types, max_len, tags=None, cut=True):
     # 2 is num of special token added by tokenizer
     max_len = max_len - 2 
     break_word = ['。', '，', '!']
@@ -193,7 +193,8 @@ def split_to_sentence(data:List[str], input_id_types, max_len, tags=None):
                 sentence += tmp
                 tmp = ''
     # cut string to word array
-    small_doc = cut_words(small_doc, tags)
+    if cut:
+        small_doc = cut_words(small_doc, tags)
     
     # cut input_id_types
     type_tensor = []
@@ -369,7 +370,7 @@ def generate_type_id(doc, offset_map):
     return type_id
 
 
-def get_label(path='/home/dy/Flat-Lattice-Transformer/data/train_2.txt'):
+def get_label(path='/home/dy/flat-chinese-ner/data/train_2.txt'):
     labels = list()
     with open(path, 'r', encoding='utf8') as f:
         file_text=f.read().encode('utf-8').decode('utf-8-sig')
