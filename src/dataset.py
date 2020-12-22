@@ -8,12 +8,14 @@ import sys
 import opencc
 
 
-fpath = '/home/dy/Flat-Lattice-Transformer/data/train_2.txt'
+fpath = '/home/dy/flat-chinese-ner/data/train_2.txt'
 USE_ALL_DATA_FOR_TRAIN = False
 max_len=128
 tagging_method = 'BI'
 role_map = {
-    '_' : 0, '*' : 0, '^' : 1, '&' : 1, '~' : 0, '@': 0, '(': 0
+    '_' : 0, '*' : 0, '^' : 1,
+    '&' : 1, '~' : 0, '@': 0, '(': 0,
+    '=' :0, '%' :0
 }
 all_type = {
         'med_exam', 'money', 'contact', 'family',
@@ -58,18 +60,23 @@ def loadInputFile(path, filter_type=[]):
 
 def romove_redundant_str(article_doc, dev_mode=False):
     str_len = {
-        '_' : 3, '*' : 4, '&' : 3, '^' : 3, '~': 4,
-        '@' : 1, '(':6
+        '_' : 3, '*' : 4,
+         '&' : 3, '^' : 3, '~': 4,
+        '@' : 1, '(':6, '=' :4, '%':5
     }
     ori_len = len(article_doc)
     offset_map = np.array([0], dtype=np.int)
 
     article_doc = article_doc.replace('医师：', '_')
+    article_doc = article_doc.replace('医师A：', '=')
+    article_doc = article_doc.replace('医师B：', '=')
     article_doc = article_doc.replace('民众：', '^')
     article_doc = article_doc.replace('家属：', '&')
     article_doc = article_doc.replace('个管师：', '*')
     article_doc = article_doc.replace('护理师：', '~')
-    # article_doc = article_doc.replace('…', '@')
+    article_doc = article_doc.replace('护理师A：', '%')
+    article_doc = article_doc.replace('……', '…、')
+    article_doc = article_doc.replace('…', '@')
     # article_doc = article_doc.replace('．．．．．．', '(')
   
     for word in article_doc:
@@ -99,6 +106,7 @@ def romove_redundant_str(article_doc, dev_mode=False):
 
 token_continual_number = False
 
+
 def preprocess_input(trainingset, position):
     # position is array like [article_id, start_pos, end_pos, type]
     label_position = 0
@@ -115,6 +123,8 @@ def preprocess_input(trainingset, position):
         for idx, word in enumerate(doc):
 
             if word in role_map.keys():
+                # if label_queue:
+                #     label_queue.pop(0)
                 continue
             idx += offset_map[idx]
             if not label_position >= len(position) and idx == int(position[label_position + 1]) and doc_idx==int(position[label_position]):
@@ -126,7 +136,6 @@ def preprocess_input(trainingset, position):
                     label_queue = list(map(
                         lambda ele: f'B-{ele[1]}' if ele[0]==0 \
                         else f'I-{ele[1]}', enumerate(label_queue)))
-                    label_position += 5
                 else:
                     if times ==1:
                         label_queue = ['S-'+label]
@@ -144,12 +153,11 @@ def preprocess_input(trainingset, position):
                                 label_queue_tmp.append(f'E-{label}')
                             else:
                                 label_queue_tmp.append(f'I-{label}')
-                        label_queue = label_queue_tmp
-                
-                    label_position += 5
+                        label_queue = label_queue_tmp.copy()
+                label_position += 5
             tag = 'O' if not label_queue else label_queue.pop(0)
-            if word == '…' or word == '．．．':
-                continue 
+            # if word == '…' or word == '．．．':
+            #     continue 
             
             clean_sentences += word
             label_per_doc.append(tag)
@@ -193,7 +201,7 @@ def split_to_sentence(data:List[str], input_id_types, max_len, tags=None):
                 sentence += tmp
                 tmp = ''
     # cut string to word array
-    small_doc = cut_words(small_doc)
+    small_doc = cut_words(small_doc, tags)
     
     # cut input_id_types
     type_tensor = []
@@ -220,16 +228,17 @@ def split_to_sentence(data:List[str], input_id_types, max_len, tags=None):
         return small_doc, type_tensor
 
 
-def cut_words(texts:List[str]) -> List[List[str]]:
+def cut_words(texts:List[str], tags=None) -> List[List[str]]:
     word_array = []
     tmp = ''
-    for sentences in texts:
+    for sid, sentences in enumerate(texts):
         cut_sentences = []
         for idx, word in enumerate(sentences):
             # if the last element of sentence and self is number
             # concat to that
             if token_continual_number and sentences[idx-1].isdigit() and word.isdigit():
                 cut_sentences[-1] += word
+
             else:
                 cut_sentences.append(word)
 
@@ -369,7 +378,7 @@ def generate_type_id(doc, offset_map):
     return type_id
 
 
-def get_label(path='/home/dy/Flat-Lattice-Transformer/data/train_2.txt'):
+def get_label(path='/home/dy/flat-chinese-ner/data/train_2.txt'):
     labels = list()
     with open(path, 'r', encoding='utf8') as f:
         file_text=f.read().encode('utf-8').decode('utf-8-sig')
@@ -397,10 +406,10 @@ def fix_BIOES_tag(fix_tag):
         for j in range(len(fix_tag[i])):
             if fix_tag[i][j][0] == 'B':
                 # single
-                if fix_tag[i][j+1][0] == 'O':
+                if j==len(fix_tag[i])-1 or fix_tag[i][j+1][0] == 'O':
                     fix_tag[i][j] = 'S' + fix_tag[i][j][1:]
             elif fix_tag[i][j][0] == 'I':
-                if fix_tag[i][j+1][0] == 'O':
+                if j==len(fix_tag[i])-1 or fix_tag[i][j+1][0] == 'O':
                     fix_tag[i][j] = 'E' + fix_tag[i][j][1:]
     return fix_tag
 
@@ -413,8 +422,8 @@ def write_ds(outfile, texts, tags, split_sen=True):
                 continue
             # print(word, tags[a_id][idx])
             out += f'{word}\t{tags[a_id][idx]}\n' 
-        # if (len(doc) < 20):
-        #     print(len(doc))
+        if (len(doc) < 20):
+            print(len(doc))
         if split_sen:
             out+='\n'
     
@@ -518,14 +527,15 @@ if __name__ == "__main__":
     
     texts, tags, input_id_types = preprocess_input(trainingset, position)
     texts, tags, _ = split_to_sentence(texts, input_id_types, max_len, tags)
-    
-   
-    
-    
+
+    # if not tagging_method == 'BI':
+    #     tags = fix_BIOES_tag(tags)
+
+
     if use_pseudo:
         pseudo_set, pseudo_pos, _ = loadInputFile('./data/pseudo_data.txt', filter_type=[])
         pseudo_text, pseudo_tag, _ = preprocess_input(pseudo_set, pseudo_pos)
-        pseudo_text, pseudo_tag =filter_Otexts(pseudo_text, pseudo_tag, list(all_type))
+        pseudo_text, pseudo_tag = filter_Otexts(pseudo_text, pseudo_tag, list(all_type))
         pseudo_text, pseudo_tag, _ = split_to_sentence(pseudo_text, None, max_len, pseudo_tag)
         texts += pseudo_text
         tags += pseudo_tag
@@ -551,7 +561,6 @@ if __name__ == "__main__":
         filtered_texts, filtered_tags = filter_Otexts(orgin_train, orgin_tags, aug_type)
 
         prefix = f'./data/fold{idx}/'
-        # write_ds(f'{prefix}filtered/origin', orgin_train, orgin_tags, split_sen=False)
         write_ds(f'{prefix}filtered/raw', filtered_texts, filtered_tags, split_sen=False)
         
         if aug_size==0:

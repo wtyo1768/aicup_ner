@@ -22,8 +22,8 @@ python3 flat_main.py \
     --status 'train' \
     --lexicon_name 'lk' \
     --bigram_min_freq 1 \
-    --embed_lr_rate 1.3 \
-    --fold 3 \
+    --embed_lr_rate .7 \
+    --fold 4 \
     --use_abs_pos false \
     --use_rel_pos true \
     --do_pred 1 \

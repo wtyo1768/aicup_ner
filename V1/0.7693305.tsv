@@ -687,8 +687,7 @@ article_id	start_position	end_position	entity_text	entity_type
 32	927	931	四個禮拜	time
 32	937	941	黃大醫師	name
 32	1001	1005	黃大醫師	name
-32	1034	1037	林……	name
-32	1037	1040	林醫師	name
+32	1034	1040	林……林醫師	name
 33	3	6	這個月	time
 33	15	18	這個月	time
 33	161	164	690	med_exam
@@ -782,11 +781,8 @@ article_id	start_position	end_position	entity_text	entity_type
 38	674	677	禮拜三	time
 38	691	696	下下禮拜三	time
 38	727	731	下個禮拜	time
-38	766	771	09356	profession
-38	771	774	422	contact
-38	774	776	34	profession
+38	766	776	0935642234	profession
 39	54	57	李延亭	name
-39	57	59	醫師	name
 39	230	233	張理明	name
 39	252	255	李醫師	name
 39	417	421	上星期二	time
@@ -829,7 +825,7 @@ article_id	start_position	end_position	entity_text	entity_type
 41	2099	2101	明年	time
 41	2102	2105	二月底	time
 41	2120	2122	半年	time
-41	2195	2197	王冠	name
+41	2195	2197	王冠	profession
 41	2593	2595	台東	location
 41	2680	2682	台東	location
 42	5	10	63554	ID
@@ -857,9 +853,7 @@ article_id	start_position	end_position	entity_text	entity_type
 43	677	682	李家明醫師	name
 43	895	897	5年	time
 43	911	914	李醫師	name
-43	967	968	星	name
-43	968	969	星	location
-43	969	972	幼兒園	profession
+43	967	972	星星幼兒園	location
 43	1005	1007	1月	time
 43	1018	1021	半年前	time
 44	3	6	許發財	name
@@ -946,8 +940,7 @@ article_id	start_position	end_position	entity_text	entity_type
 47	699	701	酒屋	profession
 47	710	714	一個禮拜	time
 47	860	863	三年多	time
-47	906	907	台	profession
-47	907	909	積電	location
+47	906	909	台積電	profession
 47	969	972	下禮拜	time
 48	50	52	今天	time
 48	95	97	今天	time
@@ -1245,7 +1238,7 @@ article_id	start_position	end_position	entity_text	entity_type
 64	751	756	12個小時	time
 64	765	770	12個小時	time
 64	923	929	line	contact
-64	930	939	drawpeter	contact
+64	930	939	drawpeter	ID
 65	4	7	張老師	name
 65	113	115	今天	time
 65	262	266	八月七號	time
@@ -1472,7 +1465,6 @@ article_id	start_position	end_position	entity_text	entity_type
 71	464	468	這個禮拜	time
 71	505	508	上禮拜	time
 71	518	521	上禮拜	time
-71	921	925	皇佳藥廠	name
 71	1092	1096	下下禮拜	time
 71	1204	1208	下下禮拜	time
 72	32	35	禮拜三	time
@@ -1508,8 +1500,7 @@ article_id	start_position	end_position	entity_text	entity_type
 73	43	46	禮拜四	time
 73	51	54	禮拜四	time
 73	70	75	7月20號	time
-73	90	91	4	time
-73	92	95	889	time
+73	92	95	889	med_exam
 73	642	644	年底	time
 73	651	654	下個月	time
 73	718	720	去年	time
@@ -1600,7 +1591,6 @@ article_id	start_position	end_position	entity_text	entity_type
 77	2001	2003	哥哥	family
 77	2018	2020	爸爸	family
 77	2136	2140	三到五年	time
-77	2165	2168	兩……	time
 77	2168	2171	第二年	time
 77	2179	2182	第二年	time
 77	2188	2191	第二年	time
@@ -1708,7 +1698,7 @@ article_id	start_position	end_position	entity_text	entity_type
 83	324	327	禮拜四	time
 83	330	334	38.1	med_exam
 83	777	782	十二個小時	time
-83	813	815	信心	name
+83	813	815	信心	location
 83	823	825	早上	time
 83	826	828	早上	time
 83	829	831	下午	time
@@ -1973,7 +1963,7 @@ article_id	start_position	end_position	entity_text	entity_type
 91	565	567	年底	time
 91	634	637	一兩天	time
 91	750	753	禮拜三	time
-91	793	796	十……	time
+91	793	794	十	time
 91	796	802	11月25號	time
 91	811	814	11月	time
 91	819	825	11月25號	time
@@ -2097,8 +2087,7 @@ article_id	start_position	end_position	entity_text	entity_type
 97	1274	1276	半年	time
 97	1300	1302	榮總	location
 97	1305	1307	台大	location
-97	1431	1432	林	name
-97	1432	1434	醫師	name
+97	1431	1434	林醫師	name
 97	2118	2123	林恆生醫師	name
 97	2217	2221	一個禮拜	time
 97	2595	2600	下下個禮拜	time
@@ -2109,7 +2098,7 @@ article_id	start_position	end_position	entity_text	entity_type
 98	406	408	四年	time
 98	416	418	七年	time
 98	480	482	高醫	location
-98	573	577	兩個禮…	time
+98	573	576	兩個禮	time
 98	579	583	兩個禮拜	time
 98	649	653	6月16	time
 98	677	679	年底	time
@@ -2129,9 +2118,9 @@ article_id	start_position	end_position	entity_text	entity_type
 98	1052	1055	一個月	time
 98	1072	1074	五週	time
 98	1089	1091	五週	time
-99	4	6	林先	name
+99	4	7	林先生	name
 99	109	112	前三天	time
-99	117	120	仙道彰	location
+99	117	120	仙道彰	name
 99	323	326	林阿奇	name
 99	336	339	林阿奇	name
 99	394	396	昨天	time
@@ -2398,10 +2387,7 @@ article_id	start_position	end_position	entity_text	entity_type
 111	1646	1650	兩個禮拜	time
 111	1681	1686	三個禮拜前	time
 111	1822	1827	三個禮拜前	time
-111	1867	1870	康瑞斯	name
-111	1919	1922	康瑞斯	name
 111	1936	1941	三個禮拜前	time
-111	2126	2129	康瑞斯	name
 111	2449	2453	兩個禮拜	time
 111	2598	2600	成大	location
 112	249	251	臺北	location
@@ -2596,7 +2582,7 @@ article_id	start_position	end_position	entity_text	entity_type
 127	620	623	12號	time
 127	709	713	line	contact
 128	7	10	三個月	time
-128	538	541	三溫暖	profession
+128	538	541	三溫暖	location
 128	836	841	11月2號	time
 128	844	846	今天	time
 128	850	855	11月2號	time

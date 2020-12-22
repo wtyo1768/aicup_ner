@@ -11,7 +11,7 @@ from src.predict import load_dev
 from paths import *
 import jieba
 import jieba.posseg as pseg
-from src.dataset import model_type, HANDLE, model_teamwork, tagging_method
+from src.dataset import model_type, HANDLE, model_teamwork, tagging_method, max_len
 
 
 
@@ -147,7 +147,7 @@ def get_aicup_devds():
         raw_data[idx], _ = romove_redundant_str(raw_data[idx], dev_mode=True)
         # offset_mapping.append(offset_map)
 
-    split_docs, type_tensor = split_to_sentence(raw_data, None, 128)
+    split_docs, type_tensor = split_to_sentence(raw_data, None, max_len)
     dev_ds = DataSet({'chars':split_docs})  
 
     return dev_ds

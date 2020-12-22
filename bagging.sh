@@ -19,7 +19,7 @@ do
         --warmup 0.1 \
         --optim 'adam' \
         --fix_bert_epoch 0 \
-        --epoch 15 \
+        --epoch 5 \
         --batch 16 \
         --status 'train' \
         --lexicon_name 'lk' \
