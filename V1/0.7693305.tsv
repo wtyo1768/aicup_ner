@@ -1878,7 +1878,7 @@ article_id	start_position	end_position	entity_text	entity_type
 85	3179	3182	下禮拜	time
 86	518	522	下個禮拜	time
 86	608	611	下禮拜	time
-87	60	64	交通大學	location
+87	60	64	交通大學	education
 87	249	253	一個禮拜	time
 87	255	260	三個禮拜後	time
 87	276	280	9月4號	time
@@ -3227,8 +3227,9 @@ article_id	start_position	end_position	entity_text	entity_type
 157	2923	2927	LINE	contact
 157	3281	3286	HUANG	name
 157	3290	3295	HUANG	name
-157	3315	3317	AN	contact
-157	3321	3324	YAN	contact
+157	3302	3304	LI	name
+157	3314	3317	YAN	name
+157	3321	3324	YAN	name
 157	3495	3497	今天	time
 157	3499	3501	今天	time
 157	3535	3538	下個月	time

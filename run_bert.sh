@@ -8,7 +8,7 @@ python3 flat_main.py \
     --data_type 'default' \
     --layer 1 \
     --use_bigram 0 \
-    --use_pos_tag 0 \
+    --use_pos_tag 1 \
     --lattice 1 \
     --use_bert 1 \
     --only_bert 1 \
@@ -22,7 +22,7 @@ python3 flat_main.py \
     --status 'train' \
     --lexicon_name 'lk' \
     --bigram_min_freq 1 \
-    --embed_lr_rate .7 \
+    --embed_lr_rate 1.3 \
     --fold 4 \
     --use_abs_pos false \
     --use_rel_pos true \
