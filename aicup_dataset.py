@@ -162,7 +162,9 @@ def get_pos_tag(sen):
     pos_tag = []
     for words, tag in pos:
         pos_tag += [tag] * len(words)
-
+        # print(words, [tag] * len(words))
+    if not len(sen) == len(pos_tag):
+        print(sen)
     assert len(sen) == len(pos_tag)
     return pos_tag
     

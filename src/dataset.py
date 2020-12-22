@@ -8,23 +8,23 @@ import sys
 import opencc
 
 
-fpath = '/home/dy/flat-chinese-ner/data/train_2.txt'
-USE_ALL_DATA_FOR_TRAIN = False
 max_len=128
 tagging_method = 'BI'
+#TODO
+token_continual_number = False
+USE_ALL_DATA_FOR_TRAIN = False
+fpath = '/home/dy/Flat-Lattice-Transformer/data/train_2.txt'
 role_map = {
-    '_' : 0, '*' : 0, '^' : 1,
-    '&' : 1, '~' : 0, '@': 0, '(': 0,
-    '=' :0, '%' :0
+    '_' : 0, '*' : 1,
+
 }
 all_type = {
-        'med_exam', 'money', 'contact', 'family',
-        'clinical_event', 'location', 'ID', 'education',
-        'others', 'name', 'time', 'profession', 'organization'
+    'med_exam', 'money', 'contact', 'family',
+    'clinical_event', 'location', 'ID', 'education',
+    'others', 'name', 'time', 'profession', 'organization'
 }
 few_type = {
-        'others', 'organization', 
-        'clinical_event', 
+    'others', 'organization', 'clinical_event', 
 }
 
 
@@ -52,6 +52,7 @@ def loadInputFile(path, filter_type=[]):
             annot=annot.split('\t')
             if annot[4] in filter_type:
                 continue
+            # print(annot[0], annot[3])
             position.extend(annot)
             mentions[annot[3]]=annot[4]
     
@@ -61,22 +62,17 @@ def loadInputFile(path, filter_type=[]):
 def romove_redundant_str(article_doc, dev_mode=False):
     str_len = {
         '_' : 3, '*' : 4,
-         '&' : 3, '^' : 3, '~': 4,
-        '@' : 1, '(':6, '=' :4, '%':5
     }
     ori_len = len(article_doc)
     offset_map = np.array([0], dtype=np.int)
 
     article_doc = article_doc.replace('医师：', '_')
-    article_doc = article_doc.replace('医师A：', '=')
-    article_doc = article_doc.replace('医师B：', '=')
-    article_doc = article_doc.replace('民众：', '^')
-    article_doc = article_doc.replace('家属：', '&')
+    article_doc = article_doc.replace('民众：', '_')
+    article_doc = article_doc.replace('家属：', '_')
     article_doc = article_doc.replace('个管师：', '*')
-    article_doc = article_doc.replace('护理师：', '~')
-    article_doc = article_doc.replace('护理师A：', '%')
-    article_doc = article_doc.replace('……', '…、')
-    article_doc = article_doc.replace('…', '@')
+    article_doc = article_doc.replace('护理师：', '*')
+    # article_doc = article_doc.replace('……', '…、')
+    # article_doc = article_doc.replace('…', '@')
     # article_doc = article_doc.replace('．．．．．．', '(')
   
     for word in article_doc:
@@ -94,17 +90,11 @@ def romove_redundant_str(article_doc, dev_mode=False):
 
     # delete init value
     if dev_mode:
-        article_doc = article_doc.replace('_', '')
-        article_doc = article_doc.replace('*', '')
-        article_doc = article_doc.replace('^', '')
-        article_doc = article_doc.replace('&', '')
-        article_doc = article_doc.replace('~', '')
-        article_doc = article_doc.replace('@', '')
-        article_doc = article_doc.replace('(', '')
+        for token in str_len.keys():
+            article_doc = article_doc.replace(token, '')
+
     offset_map = np.delete(offset_map, 0)
     return article_doc, offset_map
-
-token_continual_number = False
 
 
 def preprocess_input(trainingset, position):
@@ -121,13 +111,12 @@ def preprocess_input(trainingset, position):
         label_per_doc = []
         
         for idx, word in enumerate(doc):
-
             if word in role_map.keys():
-                # if label_queue:
-                #     label_queue.pop(0)
                 continue
             idx += offset_map[idx]
             if not label_position >= len(position) and idx == int(position[label_position + 1]) and doc_idx==int(position[label_position]):
+                # DEBUG
+                # print(doc_idx , position[label_position + 3])
                 times = int(position[label_position + 2]) - int(position[label_position + 1])
                 label = position[label_position + 4]
                 label_queue.extend([label]*times)
@@ -155,16 +144,19 @@ def preprocess_input(trainingset, position):
                                 label_queue_tmp.append(f'I-{label}')
                         label_queue = label_queue_tmp.copy()
                 label_position += 5
+            # else:
+            #     print(idx, int(position[label_position + 1]))
             tag = 'O' if not label_queue else label_queue.pop(0)
             # if word == '…' or word == '．．．':
             #     continue 
-            
+            # print(doc_idx, word, tag)
             clean_sentences += word
             label_per_doc.append(tag)
 
         clean_docs.append(clean_sentences)
         label_doc.append(label_per_doc)
-
+    print('training set', len(trainingset))
+    print('position len', len(position))
     return clean_docs, label_doc, input_id_types
 
 
@@ -236,11 +228,10 @@ def cut_words(texts:List[str], tags=None) -> List[List[str]]:
         for idx, word in enumerate(sentences):
             # if the last element of sentence and self is number
             # concat to that
-            if token_continual_number and sentences[idx-1].isdigit() and word.isdigit():
-                cut_sentences[-1] += word
-
-            else:
-                cut_sentences.append(word)
+            # if token_continual_number and sentences[idx-1].isdigit() and word.isdigit():
+            #     cut_sentences[-1] += word
+            # else:
+            cut_sentences.append(word)
 
         word_array.append(cut_sentences)
     return word_array
@@ -378,7 +369,7 @@ def generate_type_id(doc, offset_map):
     return type_id
 
 
-def get_label(path='/home/dy/flat-chinese-ner/data/train_2.txt'):
+def get_label(path='/home/dy/Flat-Lattice-Transformer/data/train_2.txt'):
     labels = list()
     with open(path, 'r', encoding='utf8') as f:
         file_text=f.read().encode('utf-8').decode('utf-8-sig')
@@ -496,7 +487,7 @@ model_type = {
 aug_size = 3
 model_teamwork = False
 remove_sentence_with_allO = False
-use_pseudo = True
+use_pseudo = False
 
 if __name__ == "__main__":
     '''
@@ -530,8 +521,9 @@ if __name__ == "__main__":
 
     # if not tagging_method == 'BI':
     #     tags = fix_BIOES_tag(tags)
-
-
+    # if True:
+    #     write_ds('./debug.txt', texts, tags)
+    # exit()
     if use_pseudo:
         pseudo_set, pseudo_pos, _ = loadInputFile('./data/pseudo_data.txt', filter_type=[])
         pseudo_text, pseudo_tag, _ = preprocess_input(pseudo_set, pseudo_pos)

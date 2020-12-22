@@ -695,11 +695,11 @@ if args.status == 'train':
         write_pred_tsv(pred)
 else:
     models_path = [
-        '/home/dy/flat-chinese-ner/model/default/fold0/2020-12-21-08-46-26/epoch-11_step-2002_f-0.769890.pt',
-        '/home/dy/flat-chinese-ner/model/default/fold1/2020-12-21-09-02-29/epoch-15_step-2730_f-0.776722.pt',
-        '/home/dy/flat-chinese-ner/model/default/fold2/2020-12-21-09-18-33/epoch-10_step-1810_f-0.769046.pt',
-        '/home/dy/flat-chinese-ner/model/default/fold3/2020-12-21-09-32-06/epoch-8_step-1456_f-0.788785.pt',
-        '/home/dy/flat-chinese-ner/model/default/fold4/2020-12-21-09-48-03/epoch-14_step-2548_f-0.769837.pt',
+        '/home/dy/Flat-Lattice-Transformer/model/default/fold0/2020-12-21-08-46-26/epoch-11_step-2002_f-0.769890.pt',
+        '/home/dy/Flat-Lattice-Transformer/model/default/fold1/2020-12-21-09-02-29/epoch-15_step-2730_f-0.776722.pt',
+        '/home/dy/Flat-Lattice-Transformer/model/default/fold2/2020-12-21-09-18-33/epoch-10_step-1810_f-0.769046.pt',
+        '/home/dy/Flat-Lattice-Transformer/model/default/fold3/2020-12-21-09-32-06/epoch-8_step-1456_f-0.788785.pt',
+        '/home/dy/Flat-Lattice-Transformer/model/default/fold4/2020-12-21-09-48-03/epoch-14_step-2548_f-0.769837.pt',
     ]
     mpath = models_path[args.fold]
     print('predicting...')
