@@ -3,6 +3,7 @@ from src.dataset  import romove_redundant_str
 from src.predict import load_dev, split_to_pred_per_article, write_result, count_article_length
 from aicup_dataset import get_label_vocab
 
+
 def vote(all_pred):
     print(all_pred[0][0:10])
     print(all_pred[1][0:10])
@@ -22,8 +23,9 @@ def vote(all_pred):
 if __name__ == "__main__":
 
     total_pred = []
+    Model='flat'
     for i in range(4):
-        total_pred.append(np.load(f'./V1/pred/pred{i}.npy'))
+        total_pred.append(np.load(f'./pred/{Model}/{i}.npy'))
     
     vote_result = vote(total_pred)
     dev_data = load_dev()
@@ -44,7 +46,7 @@ if __name__ == "__main__":
         pred_per_article, 
         offset_map, 
         origin_data, 
-        output_path='./bagging.tsv'
+        output_path='./pred/bagging.tsv'
     )
     # print(voted_res)
     # print(np.stack([np.ones(3), np.zeros(3) ], axis=-1))

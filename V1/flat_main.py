@@ -214,7 +214,7 @@ raw_dataset_cache_name = os.path.join('cache',args.data_type
 
 if args.dataset == 'weibo':
     datasets,vocabs,embeddings = load_weibo_ner(weibo_ner_path,yangjie_rich_pretrain_unigram_path,yangjie_rich_pretrain_bigram_path,
-                                                    _refresh=refresh_data,index_token=False,
+                                                _refresh=refresh_data,index_token=False,
                                                 _cache_fp=raw_dataset_cache_name,
                                                 char_min_freq=args.char_min_freq,
                                                 bigram_min_freq=args.bigram_min_freq,
@@ -224,6 +224,7 @@ elif args.dataset == 'aicup':
     from aicup_dataset import load_aicup_ner
     datasets,vocabs,embeddings = load_aicup_ner(aicup_ner_path,yangjie_rich_pretrain_unigram_path,yangjie_rich_pretrain_bigram_path,
                                                 _refresh=refresh_data,index_token=False,
+                                                char_word_dropout=0.05,
                                                 _cache_fp=raw_dataset_cache_name,
                                                 char_min_freq=args.char_min_freq,
                                                 bigram_min_freq=args.bigram_min_freq,
@@ -398,8 +399,8 @@ if args.model == 'transformer':
                 vocabs['lattice'],
                 model_dir_or_name='cn-wwm',
                 requires_grad=False,
-                word_dropout=0.02,
-                layers='-1',
+                word_dropout=0.2,
+                layers='-1, -3, -5',
             )
         else:
             bert_embedding = None
@@ -485,8 +486,8 @@ if args.status=='train':
         print_info('{}init pram{}'.format('*' * 15, '*' * 15))
 
 loss = LossInForward()
-encoding_type = 'bioes'
-# encoding_type = 'bio'
+# encoding_type = 'bioes'
+encoding_type = 'bio'
 f1_metric = SpanFPreRecMetric(
     vocabs['label'],
     pred='pred',
@@ -633,7 +634,7 @@ def write_pred_tsv(pred, ):
     pred_per_article = split_to_pred_per_article([pred], count_article_length(dev_data))
     print('writing output.tsv file...')
     
-    write_result(dev_data, pred_per_article, offset_map, origin_data)
+    write_result(dev_data, pred_per_article, offset_map, origin_data, output_path='../pred/output.tsv')
 
 
 def visualize_error(ds, target, pred):

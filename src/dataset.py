@@ -10,13 +10,14 @@ from fastNLP import Vocabulary, DataSet
 
 
 max_len=128
-tagging_method = 'BIES'
+tagging_method = 'BI'
+# tagging_method = 'BIES'
 #TODO
 token_continual_number = False
 USE_ALL_DATA_FOR_TRAIN = False
 fpath = '/home/dy/Flat-Lattice-Transformer/data/train_2.txt'
 role_map = {
-    '_' : 0, '*' : 1,
+    '_' : 0, '*' : 1, '^' : 1,
 }
 all_type = {
     'med_exam', 'money', 'contact', 'family',
@@ -88,37 +89,35 @@ def loadInputFile(path, filter_type=[]):
 
 
 def romove_redundant_str(article_doc, dev_mode=False):
-    str_len = {
-        '_' : 3, '*' : 4,
-    }
-    ori_len = len(article_doc)
-    offset_map = np.array([0], dtype=np.int)
+    redundant_str = [
+        '医师：','民众：','家属：',
+        '个管师：', '护理师：', 
+    ]
+    len_str = { '_' : 3, '*': 4  , '^' :5}
+    str_len = { 3 : '_', 4 : '*' , 5 : '^'}
 
-    article_doc = article_doc.replace('医师：', '_')
-    article_doc = article_doc.replace('民众：', '_')
-    article_doc = article_doc.replace('家属：', '_')
-    article_doc = article_doc.replace('个管师：', '*')
-    article_doc = article_doc.replace('护理师：', '*')
-    # article_doc = article_doc.replace('……', '…、')
-    # article_doc = article_doc.replace('…', '@')
-    # article_doc = article_doc.replace('．．．．．．', '(')
-  
+    for role_str in redundant_str:
+        # Change to Sentence form by add 。
+        article_doc = article_doc.replace('……'+role_str, '…。'+str_len[len(role_str)])
+        article_doc = article_doc.replace(role_str, str_len[len(role_str)])
+
+    offset_map = np.array([0], dtype=np.int)
     for word in article_doc:
-        if word in str_len.keys():
+        if word in len_str.keys():
             if dev_mode:
                 offset_map = np.delete(offset_map, -1)
                 # B.C. for offset_map at init
                 last_offset =  offset_map[-1]  if offset_map.size > 0 else 0
-                offset_map = np.append(offset_map, str_len[word] + last_offset )
+                offset_map = np.append(offset_map, len_str[word] + last_offset )
             else:
                 # need -1 since the return value include special tokens at training data
-                offset_map = np.append(offset_map, str_len[word] + offset_map[-1] - 1 )
+                offset_map = np.append(offset_map, len_str[word] + offset_map[-1] - 1 )
         else :
             offset_map = np.append(offset_map, offset_map[-1])
 
     # delete init value
     if dev_mode:
-        for token in str_len.keys():
+        for token in len_str.keys():
             article_doc = article_doc.replace(token, '')
 
     offset_map = np.delete(offset_map, 0)
@@ -412,10 +411,10 @@ def filter_Otexts(texts, tags, aug_type):
     Set aug_type to all_label to filter the sentences with all O tags
     '''
     aug_type = [    
-        [f'B-{tag}', f'I-{tag}', f'S-{tag}'] for tag in aug_type 
+        [f'B-{tag}', f'I-{tag}'] for tag in aug_type 
     ]
     aug_type = [atype for sublist in aug_type for atype in sublist]
-    
+
     filtered_texts = []
     filtered_tags = []
     for i, sentence_tag in enumerate(tags):
@@ -442,7 +441,7 @@ def augment(prefix, fold ,aug_type=[], augument_size=3):
         seed=0
     )
     aug_texts, aug_tags = ner.augment(file_name=f'{prefix}filtered/raw')
-    write_ds(f'./data/visualize/{str(aug_type)}{fold}', aug_texts, aug_tags)
+    write_ds(f'./data/visualize/raw{fold}', aug_texts, aug_tags)
     return aug_texts, aug_tags
 
 
@@ -495,13 +494,15 @@ if __name__ == "__main__":
         trainingset, position, labels = loadInputFile(fpath, filter_type=[])
     
     texts, tags, input_id_types = preprocess_input(trainingset, position)
+
+    
     texts, tags, _ = split_to_sentence(texts, input_id_types, max_len, tags)
 
     # if not tagging_method == 'BI':
     #     tags = fix_BIOES_tag(tags)
-    # if True:
-    #     write_ds('./debug.txt', texts, tags)
-    # exit()
+    if True:
+        write_ds('./debug.txt', texts, tags)
+
     if use_pseudo:
         pseudo_set, pseudo_pos, _ = loadInputFile('./data/pseudo_data.txt', filter_type=[])
         pseudo_text, pseudo_tag, _ = preprocess_input(pseudo_set, pseudo_pos)
@@ -525,11 +526,12 @@ if __name__ == "__main__":
             orgin_train, orgin_tags = filter_Otexts(orgin_train, orgin_tags, list(all_type))
             print('Sentence with valid tags', len(texts))
 
-
+        
         print(f'--------Fold {idx}----------')
         filtered_texts, filtered_tags = filter_Otexts(orgin_train, orgin_tags, aug_type)
-
         prefix = f'./data/fold{idx}/'
+        
+        
         write_ds(f'{prefix}filtered/raw', filtered_texts, filtered_tags, split_sen=False)
         
         if aug_size==0:

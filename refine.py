@@ -5,8 +5,8 @@ import pandas as pd
 import numpy as np
 
 
-def drop_tokens(path):
-    data = pd.read_csv(path, sep='\t').to_numpy()
+def drop_tokens(read_path):
+    data = pd.read_csv(read_path, sep='\t').to_numpy()
 
     output="article_id\tstart_position\tend_position\tentity_text\tentity_type\n"
     mark = [':', '，', ',', '!', '。', '.', ' ']
@@ -31,8 +31,8 @@ def drop_tokens(path):
     return output
 
 
-def write_res(output):
-    with open('./V1/refined.tsv','w',encoding='utf-8') as f:
+def write_res(output, outpath):
+    with open(outpath, 'w', encoding='utf-8') as f:
         f.write(output)
     return
 
@@ -81,7 +81,8 @@ def write_refined(refined):
             output+=line
     with open('./V1/refined.tsv','w',encoding='utf-8') as f:
         f.write(output)
-    
+
+
 def rule(origin_text, pred_result, r, length, entity, replace, ignorecase=True):
     for arti_id in range(len(origin_text)):
         if ignorecase:
@@ -101,6 +102,7 @@ def rule(origin_text, pred_result, r, length, entity, replace, ignorecase=True):
                 pred_result[str(arti_id)] = np.append(pred_result[str(arti_id)], arr).reshape(-1,4)
     return pred_result
 
+
 def refine_output(pred_result):
     # ex = extractor()
     origin_text = load_dev(simplify=False)
@@ -118,14 +120,14 @@ def refine_output(pred_result):
     return pred_result    
 
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     # 先將錯誤的符號去除, 寫在refine.tsv中
-    path = './V1/output.tsv'
-    output = drop_tokens(path)
-    write_res(output)
+
+    output = drop_tokens('./pred/bagging.tsv')
+    write_res(output, './pred/refined.tsv')
 
     # 生成dict {artical id:[[ ],[ ],[ ]]}
-    path = './V1/refined.tsv'
+    path = './pred/refined.tsv'
     pred_res = get_pred_output(path) 
 
     # 用RULES抓取一些東西
