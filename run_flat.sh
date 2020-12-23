@@ -17,15 +17,15 @@ python3 flat_main.py \
     --after_bert 'mlp' \
     --warmup 0.1 \
     --optim 'adam' \
-    --fix_bert_epoch 1 \
-    --epoch 15 \
+    --fix_bert_epoch 0 \
+    --epoch 10 \
     --batch 16 \
     --status 'train' \
-    --lexicon_name 'lk' \
+    --lexicon_name 'yj' \
     --bigram_min_freq 1 \
     --embed_lr_rate 1.3 \
     --fold 4 \
-    --use_abs_pos false \
+    --use_abs_pos true \
     --use_rel_pos true \
     --do_pred 1 \
     --crf_lr 0.1 \
@@ -38,3 +38,5 @@ python3 flat_main.py \
 # TODO 等價字替換 nlpcda
 # tune position embedding
 # remove noise
+#學姊 family?
+# 50	2415	2422	DRLINOP	contact
