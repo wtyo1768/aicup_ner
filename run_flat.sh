@@ -8,7 +8,7 @@ python3 flat_main.py \
     --data_type 'default' \
     --layer 1 \
     --use_bigram 0 \
-    --use_pos_tag 0 \
+    --use_pos_tag 1 \
     --lattice 1 \
     --use_bert 1 \
     --only_bert 0 \
@@ -21,7 +21,7 @@ python3 flat_main.py \
     --epoch 10 \
     --batch 16 \
     --status 'train' \
-    --lexicon_name 'yj' \
+    --lexicon_name 'lk' \
     --bigram_min_freq 1 \
     --embed_lr_rate 1.3 \
     --fold 4 \
@@ -34,9 +34,10 @@ python3 flat_main.py \
     # --bert_lr_rate 0.5 \
     # --embed_lr_rate 1
 
-# bagging with no bigram
 # TODO 等價字替換 nlpcda
 # tune position embedding
 # remove noise
-#學姊 family?
+# 學姊 family?
 # 50	2415	2422	DRLINOP	contact
+# 第八號 ID?
+# Weighted Voting 

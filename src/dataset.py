@@ -15,9 +15,13 @@ tagging_method = 'BI'
 token_continual_number = False
 USE_ALL_DATA_FOR_TRAIN = False
 fpath = '/home/dy/flat-chinese-ner/data/train_2.txt'
+aug_size = 1
+model_teamwork = False
+remove_sentence_with_allO = False
+use_pseudo = False
+HANDLE = 'default'
 role_map = {
     '_' : 0, '*' : 1, '^' : 1,
-
 }
 all_type = {
     'med_exam', 'money', 'contact', 'family',
@@ -27,23 +31,40 @@ all_type = {
 few_type = {
     'others', 'organization', 'clinical_event', 
 }
+model_type = {
+    'minority' : [
+        'ID', 'education', 'family', 'profession',
+    ],
+    'number' : [
+        'money', 'time', 'med_exam', 'ID', 
+    ],
+    'string' : [
+        'money', 'time', 'contact', 'family',
+        'location', 'education',
+        'name', 'profession', 
+    ],
+    'default' : [],
+    'time' : ['time'],
+}
 
 
-def loadInputFile(path, filter_type=[]):  
-    # The default filtering label list
-    if filter_type == []:
-        filter_type = list(few_type) 
-
-    trainingset = list()
-    position = list()
-    mentions = dict()
+def loadInputFile(path):  
+    converter = opencc.OpenCC('t2s.json')
     with open(path, 'r', encoding='utf8') as f:
-        file_text=f.read().encode('utf-8').decode('utf-8-sig')
-        
-        converter = opencc.OpenCC('t2s.json')
+        file_text=f.read().encode('utf-8').decode('utf-8-sig')   
         file_text = converter.convert(file_text)
 
     datas=file_text.split('\n\n--------------------\n\n')[:-1]
+    return datas
+
+
+def parse_document(datas, filter_type=[]):
+    # The default filtering label list
+    if filter_type == []:
+        filter_type = list(few_type) 
+    trainingset = list()
+    position = list()
+    mentions = dict()
     for data in datas:
         data=data.split('\n')
         content=data[0]
@@ -63,7 +84,7 @@ def loadInputFile(path, filter_type=[]):
 def romove_redundant_str(article_doc, dev_mode=False):
     redundant_str = [
         '医师：','民众：','家属：',
-        '个管师：', '护理师：', 
+        '个管师：', '护理师：', '医师A：', '医师B：'
     ]
     len_str = { '_' : 3, '*': 4  , '^' :5}
     str_len = { 3 : '_', 4 : '*' , 5 : '^'}
@@ -102,7 +123,7 @@ def preprocess_input(trainingset, position, add_prefix=True):
     input_id_types = []
     clean_docs = []
     label_doc = []
-    for doc_idx, doc in enumerate(trainingset):
+    for doc in trainingset:
         label_queue = []
         doc, offset_map = romove_redundant_str(doc)
         input_id_types.append(generate_type_id(doc, offset_map))
@@ -113,7 +134,12 @@ def preprocess_input(trainingset, position, add_prefix=True):
             if word in role_map.keys():
                 continue
             idx += offset_map[idx]
-            if not label_position >= len(position) and idx == int(position[label_position + 1]) and doc_idx==int(position[label_position]):
+            if label_position < len(position):
+                doc_idx = int(position[label_position])
+            
+            if not label_position >= len(position) and \
+                    idx==int(position[label_position + 1]) and \
+                    doc_idx==int(position[label_position]):
                 # DEBUG
                 # print(doc_idx , position[label_position + 3])
                 times = int(position[label_position + 2]) - int(position[label_position + 1])
@@ -151,11 +177,10 @@ def preprocess_input(trainingset, position, add_prefix=True):
             # print(doc_idx, word, tag)
             clean_sentences += word
             label_per_doc.append(tag)
-
+            
         clean_docs.append(clean_sentences)
         label_doc.append(label_per_doc)
-    print('training set', len(trainingset))
-    print('position len', len(position))
+
     return clean_docs, label_doc, input_id_types
 
 
@@ -237,126 +262,6 @@ def cut_words(texts:List[str], tags=None) -> List[List[str]]:
     return word_array
     
 
-def val_split(texts, tags, input_id_types, cv=False):
-    from sklearn.model_selection import train_test_split
-    
-
-    SPLIT = 0.5
-    #  this block is use for upload dev data to ai-cup platform 
-    if USE_ALL_DATA_FOR_TRAIN:
-        texts, tags = zip(*shuffle(list(zip(texts, tags))))
-        return texts, tags, input_id_types, None, None, None
-
-    text_ds = np.array(list(zip(texts, input_id_types)), dtype=object)
-    # print(tags)
-    if cv: SPLIT = .2
-    train_texts, val_texts, train_tags, val_tags = train_test_split(text_ds, tags, test_size=SPLIT)
-
-    if cv: return train_texts, val_texts, train_tags, val_tags
-
-    val_texts, test_texts, val_tags, test_tags = train_test_split(val_texts, val_tags, test_size=.5)
-    return train_texts, train_tags, val_texts, val_tags, test_texts, test_tags
-
-
-def encode_data(
-    texts,
-    token_type_ids,
-    text_tags=None,
-    **kargs,
-    ):
-    from transformers import AutoTokenizer
-
-    PAD_TOKEN = 'O'
-    max_len = kargs.get('max_len')
-
-    tokenizer = AutoTokenizer.from_pretrained(
-        kargs.get('pretrained'),
-        padding_side='right',
-    )
-    encodings = tokenizer(
-        texts,
-        is_split_into_words=True,
-        padding=True, 
-        max_length=max_len,
-        return_token_type_ids=False,
-        add_special_tokens=True,
-    )  
-    if kargs.get('use_type_id'):
-        for i, input_ids in enumerate(encodings['input_ids']):
-            len_input = len(input_ids)
-            # CLS typeid
-            token_type_ids[i].insert(0, 0)
-            len_typeid = len(token_type_ids[i])
-            # PAD typeid
-            if len_typeid < max_len -1:
-                token_type_ids[i].extend([0]*(max_len-len_typeid-1))
-            # SEP typeid
-            token_type_ids[i].append(0)
-            assert(len(token_type_ids[i]) == max_len)
-
-        encodings['token_type_ids'] = token_type_ids
-
-    if text_tags:
-        labels = [[tag2id[tag] for tag in doc] for doc in text_tags]
-        # padding the label
-        for i, batch_label in enumerate(labels):
-            # CLS 
-            batch_label = [tag2id[PAD_TOKEN]] + batch_label 
-            # SEP 
-            batch_label.append(tag2id[PAD_TOKEN]) 
-            # PAD 
-            batch_label.extend([tag2id[PAD_TOKEN]] *(max_len - len(batch_label)))
-            labels[i] = batch_label
-            assert(max_len == len(batch_label) == len(encodings['input_ids'][i]))
-        return encodings, labels
-    else:
-        return encodings
-
-
-class AICupDataset(torch.utils.data.Dataset):
-    def __init__(self, encodings, labels=None):
-        self.encodings = encodings
-        self.labels = labels
-
-    def __getitem__(self, idx):
-        item = {key: torch.tensor(val[idx]) for key, val in self.encodings.items()}
-        if self.labels:
-            item['labels'] = torch.tensor(self.labels[idx])
-        return item
-
-    def __len__(self):
-        if self.labels:
-            return len(self.labels)
-        else:
-            return len(self.encodings['input_ids'])
-
-
-def get_dataset(**kargs):
-    trainingset, position, _ = loadInputFile(fpath)
-
-    texts, tags, input_id_types = preprocess_input(trainingset, position)
-    texts, tags, input_id_types = split_to_sentence(texts, input_id_types, kargs.get('max_len'), tags=tags,)
-    train_texts_ds, train_tags, val_texts_ds, val_tags, test_texts_ds, test_tags = val_split(texts, tags, input_id_types)
-
-    train_texts, train_input_id_types = zip(*train_texts_ds)
-    val_texts, val_input_id_types = zip(*val_texts_ds)
-    test_texts, test_input_id_types = zip(*test_texts_ds)
-    
-    train_encodings, train_labels = encode_data(train_texts, train_input_id_types, train_tags, **kargs)
-    train_dataset = AICupDataset(train_encodings, train_labels)
-    # this block is used to upload data to ai cup platform
-    if USE_ALL_DATA_FOR_TRAIN:
-        return train_dataset, None, None
-
-    val_encodings, val_labels = encode_data(val_texts, val_input_id_types, val_tags, **kargs)
-    val_dataset = AICupDataset(val_encodings, val_labels)
-
-    test_encodings, test_labels = encode_data(test_texts, test_input_id_types, test_tags, **kargs)
-    test_dataset = AICupDataset(test_encodings, test_labels)
-
-    return train_dataset, val_dataset, test_dataset
-
-
 def generate_type_id(doc, offset_map):
     type_id = []
     for idx, word in enumerate(doc):
@@ -367,29 +272,6 @@ def generate_type_id(doc, offset_map):
             if offset_map[idx] == offset:
                 type_id.append(role_map[role])
     return type_id
-
-
-def get_label(path='/home/dy/flat-chinese-ner/data/train_2.txt'):
-    labels = list()
-    with open(path, 'r', encoding='utf8') as f:
-        file_text=f.read().encode('utf-8').decode('utf-8-sig')
-    datas=file_text.split('\n\n--------------------\n\n')[:-1]
-    for data in datas:
-        data=data.split('\n')
-        annotations=data[1:]
-        for annot in annotations[1:]:
-            annot=annot.split('\t')
-            labels.append(annot[4])
-
-    unique_labels = list(set(labels))
-    tagging_labels = []
-
-    if tagging_method == 'BI':
-        for label in unique_labels:
-            for prefix in tagging_method:
-                tagging_labels.append(f'{prefix}-{label}')
-    tagging_labels.append('O')
-    return tagging_labels
 
 
 def fix_BIOES_tag(fix_tag):
@@ -414,16 +296,13 @@ def write_ds(outfile, texts, tags, split_sen=True):
             # print(word, tags[a_id][idx])
             out += f'{word}\t{tags[a_id][idx]}\n' 
         if (len(doc) < 20):
-            print(len(doc))
+            if False:
+                print(len(doc))
         if split_sen:
             out+='\n'
     
     with open(outfile, 'w+' ,encoding='utf-8') as f:
         f.write(out)
-
-
-tag2id = {tag: id for id, tag in enumerate(get_label())}
-id2tag = {id: tag for tag, id in tag2id.items()}
 
 
 def filter_Otexts(texts, tags, aug_type):
@@ -468,26 +347,6 @@ def augment(prefix, fold ,aug_type=[], augument_size=3):
     return aug_texts, aug_tags
 
 
-HANDLE = 'default'
-model_type = {
-    'minority' : [
-        'ID', 'education', 'family', 'profession',
-    ],
-    'number' : [
-        'money', 'time', 'med_exam', 'ID', 
-    ],
-    'string' : [
-        'money', 'time', 'contact', 'family',
-        'location', 'education',
-        'name', 'profession', 
-    ],
-    'default' : [],
-    'time' : ['time'],
-}
-aug_size = 3
-model_teamwork = False
-remove_sentence_with_allO = False
-use_pseudo = False
 
 if __name__ == "__main__":
     '''
@@ -503,87 +362,85 @@ if __name__ == "__main__":
 
         Augment data need to split into sentence
     ''' 
-    # 
     if HANDLE =='default':
         aug_type = ['family', 'location', 'education', 'profession', 'contact']
     else:
         aug_type = model_type[HANDLE]
     
-    if model_teamwork:
-        # disjoint
-        filter_type = all_type - set(aug_type)
-        trainingset, position, labels = loadInputFile(fpath, filter_type=filter_type)
-    else:
-        trainingset, position, labels = loadInputFile(fpath, filter_type=[])
+    # if model_teamwork:
+    #     # disjoint
+    #     filter_type = all_type - set(aug_type)
+    #     docs = loadInputFile(fpath)
+    #     trainingset, position, labels = parse_document(docs, filter_type=filter_type)
+    # else:
+    #     docs = loadInputFile(fpath)
+    #     trainingset, position, labels = parse_document(docs, filter_type=[])
     
-    texts, tags, input_id_types = preprocess_input(trainingset, position)
-
-    
-    texts, tags, _ = split_to_sentence(texts, input_id_types, max_len, tags)
-
     # if not tagging_method == 'BI':
     #     tags = fix_BIOES_tag(tags)
-    if True:
-        write_ds('./debug.txt', texts, tags)
+    # if True:
+    #     write_ds('./debug.txt', texts, tags)
+    # if use_pseudo:
+    #     docs = loadInputFile('./data/pseudo_data.txt', filter_type=filter_type)
+    #     pseudo_set, pseudo_pos, _ = parse_document(docs, filter_type=[]) 
+    #     pseudo_text, pseudo_tag, _ = preprocess_input(pseudo_set, pseudo_pos)
+    #     pseudo_text, pseudo_tag = filter_Otexts(pseudo_text, pseudo_tag, list(all_type))
+    #     pseudo_text, pseudo_tag, _ = split_to_sentence(pseudo_text, None, max_len, pseudo_tag)
+    #     texts += pseudo_text
+    #     tags += pseudo_tag
 
-    if use_pseudo:
-        pseudo_set, pseudo_pos, _ = loadInputFile('./data/pseudo_data.txt', filter_type=[])
-        pseudo_text, pseudo_tag, _ = preprocess_input(pseudo_set, pseudo_pos)
-        pseudo_text, pseudo_tag = filter_Otexts(pseudo_text, pseudo_tag, list(all_type))
-        pseudo_text, pseudo_tag, _ = split_to_sentence(pseudo_text, None, max_len, pseudo_tag)
-        texts += pseudo_text
-        tags += pseudo_tag
-        # trainingset += pseudo_set
-        # position += pseudo_pos
-    texts = np.array(texts, dtype=object)
-    tags = np.array(tags, dtype=object)
+    docs = loadInputFile(fpath)
+    docs = np.array(docs) 
+    print('Origin docs...', docs.shape[0])
 
-    print('Using label:', set(list(labels.values())))
-    print('Origin sentence...', len(texts))
     # Kfold split
-    kf = ShuffleSplit(n_splits=5, test_size=0.2, random_state=0)
-    
-    for idx, (train, test) in enumerate(kf.split(texts)):
-        orgin_train, orgin_tags = texts[train].tolist(), tags[train].tolist()
-        dev_text, dev_tags = texts[test], tags[test]
+    kf = ShuffleSplit(n_splits=5, test_size=0.3, random_state=0)
+    for idx, (train, test) in enumerate(kf.split(docs)):
+        train_docs, test_docs = docs[train].tolist(), docs[test].tolist()
+        
+        train_set, train_pos, _ = parse_document(train_docs, filter_type=[])
+        test_set, test_pos, _   = parse_document(test_docs, filter_type=[])
+        
+        orgin_train, orgin_tags, _ = preprocess_input(train_set, train_pos)
+        dev_text, dev_tags, _ =      preprocess_input(test_set, test_pos)
+        
+        orgin_train, orgin_tags, _ = split_to_sentence(orgin_train, None, max_len, orgin_tags)
+        dev_text, dev_tags, _ =      split_to_sentence(dev_text, None, max_len, dev_tags)
+
         if remove_sentence_with_allO:
             orgin_train, orgin_tags = filter_Otexts(orgin_train, orgin_tags, list(all_type))
             print('Sentence with valid tags', len(texts))
 
         
         print(f'--------Fold {idx}----------')
-        filtered_texts, filtered_tags = filter_Otexts(orgin_train, orgin_tags, aug_type)
         prefix = f'./data/fold{idx}/'
-        
-        
-        write_ds(f'{prefix}filtered/raw', filtered_texts, filtered_tags, split_sen=False)
-        
+        write_ds(f'{prefix}dev/{HANDLE}', dev_text, dev_tags)
+
+        # Augmentation Disabled 
         if aug_size==0:
-            # Augmentation Disabled 
             write_ds(f'{prefix}/train/{HANDLE}', orgin_train, orgin_tags)
-            write_ds(f'{prefix}dev/{HANDLE}', dev_text, dev_tags)
             continue
         
+        # Data Augmentation
+        filtered_texts, filtered_tags = filter_Otexts(orgin_train, orgin_tags, aug_type)
+        write_ds(f'{prefix}filtered/raw', filtered_texts, filtered_tags, split_sen=False)
         aug_texts, aug_tags = augment(prefix, idx, aug_type=aug_type, augument_size=aug_size)
-        write_ds(f'{prefix}dev/{HANDLE}', dev_text, dev_tags)
-        
-
         aug_sen, sen_tags, _ = split_to_sentence(aug_texts, None, max_len, aug_tags)
         aug_sen, sen_tags = filter_Otexts(aug_sen, sen_tags, list(all_type))
         
+        # Change tagging method
         if not tagging_method =='BI':
             sen_tags = fix_BIOES_tag(sen_tags)
 
         print('Sentence to augmentation', len(filtered_texts))
         print('Augmented sentence', len(aug_sen))
+        
         # concat augmented sample
-        # print('Origin sentence...', len(orgin_train))
-
         orgin_train += aug_sen
         orgin_tags += sen_tags
         orgin_train, orgin_tags = zip(*shuffle(list(zip(orgin_train, orgin_tags))))
         write_ds(f'{prefix}/train/{HANDLE}', orgin_train, orgin_tags)
+        
         print('After augmentation', len(orgin_train))
-
         print('train:',len(orgin_train),
-            'val:',len(dev_text),)  
+                'val:',len(dev_text),)  

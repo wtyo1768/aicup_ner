@@ -1,6 +1,6 @@
 from typing import Dict, List, Tuple
-from src.dataset  import encode_data, AICupDataset, id2tag, split_to_sentence
-from src.dataset  import romove_redundant_str, generate_type_id
+from src.huggingface_ds  import encode_data, AICupDataset, id2tag
+from src.dataset import split_to_sentence, romove_redundant_str, generate_type_id
 from seqeval.metrics.sequence_labeling import get_entities
 import numpy as np
 import pandas as pd

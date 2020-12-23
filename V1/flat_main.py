@@ -399,8 +399,8 @@ if args.model == 'transformer':
                 vocabs['lattice'],
                 model_dir_or_name='cn-wwm',
                 requires_grad=False,
-                word_dropout=0.2,
-                layers='-1, -3, -5',
+                word_dropout=0.02,
+                layers='-1, 3',
             )
         else:
             bert_embedding = None
