@@ -6,6 +6,7 @@ import numpy as np
 import torch
 import sys
 import opencc
+from fastNLP import Vocabulary, DataSet
 
 
 max_len=128
@@ -272,6 +273,26 @@ def generate_type_id(doc, offset_map):
             if offset_map[idx] == offset:
                 type_id.append(role_map[role])
     return type_id
+
+
+def get_label_vocab(data_type='default'):
+    label = [
+            'family', 'education', 'money',
+            'med_exam', 'ID', 'contact', 
+            'name', 'time', 'location', 'profession'
+    ]
+    total_label = []
+    
+    for prefix in tagging_method:
+        total_label.extend([prefix+'-' + ele for ele in label])
+    total_label.append('O')
+    print(total_label)
+    label_ds = DataSet({'target':total_label})
+    label_vocab = Vocabulary(unknown=None, padding=None)
+    label_vocab.from_dataset(label_ds, field_name='target')
+    label_vocab.index_dataset(label_ds, field_name='target')
+    # label_vocab.add_word_lst(total_label) 
+    return label_vocab
 
 
 def fix_BIOES_tag(fix_tag):

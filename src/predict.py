@@ -40,9 +40,9 @@ def align_predict(preditions, argmax=True):
         argmax
     else:
         pred = preditions
-
+    label_vocab = get_label_vocab()
     pred_tag = [list(
-       map(lambda ele: id2tag[ele] ,line)
+       map(lambda ele: label_vocab.to_word(ele) ,line)
     ) for line in pred]
 
     # doc_result = np.array(split_docs).flatten()
