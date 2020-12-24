@@ -15,8 +15,8 @@ tagging_method = 'BI'
 #TODO
 token_continual_number = False
 USE_ALL_DATA_FOR_TRAIN = False
-fpath = '/home/dy/Flat-Lattice-Transformer/data/train_2.txt'
-aug_size = 3
+fpath = '/home/dy/flat-chinese-ner/data/train_2.txt'
+aug_size = 0
 model_teamwork = False
 remove_sentence_with_allO = False
 use_pseudo = False
@@ -485,16 +485,15 @@ if __name__ == "__main__":
         prefix = f'./data/fold{idx}/'
         write_ds(f'{prefix}dev/{HANDLE}', dev_text, dev_tags)
 
+        # Sliding window Augmentation
+        sliding_train, sliding_tags = sliding_window(orgin_train, orgin_tags, max_len)
+        orgin_train += sliding_train
+        orgin_tags += sliding_tags
+
         # Augmentation Disabled 
         if aug_size==0:
             write_ds(f'{prefix}/train/{HANDLE}', orgin_train, orgin_tags)
             continue
-
-        # Sliding window Augmentation
-        sliding_train, sliding_tags = sliding_window(orgin_train, orgin_tags, max_len)
-
-        orgin_train += sliding_train
-        orgin_tags += sliding_tags
 
         # Data Augmentation
         filtered_texts, filtered_tags = filter_Otexts(orgin_train, orgin_tags, aug_type)
@@ -510,7 +509,7 @@ if __name__ == "__main__":
         print('Sentence to augmentation', len(filtered_texts))
         print('Augmented sentence', len(aug_sen))
         
-        # concat augmented sample
+        # Concat augmented sample
         orgin_train += aug_sen
         orgin_tags += sen_tags
         orgin_train, orgin_tags = zip(*shuffle(list(zip(orgin_train, orgin_tags))))
