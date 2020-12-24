@@ -2,7 +2,7 @@ from src.dataset import *
 import torch
 
 
-def get_label(path='/home/dy/Flat-Lattice-Transformer/data/train_2.txt'):
+def get_label(path='/home/dy/flat-chinese-ner/data/train_2.txt'):
     labels = list()
     with open(path, 'r', encoding='utf8') as f:
         file_text=f.read().encode('utf-8').decode('utf-8-sig')

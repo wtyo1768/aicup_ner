@@ -509,7 +509,7 @@ if __name__ == "__main__":
         print('Sentence to augmentation', len(filtered_texts))
         print('Augmented sentence', len(aug_sen))
         
-        # concat augmented sample
+        # Concat augmented sample
         orgin_train += aug_sen
         orgin_tags += sen_tags
         orgin_train, orgin_tags = zip(*shuffle(list(zip(orgin_train, orgin_tags))))

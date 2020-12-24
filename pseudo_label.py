@@ -34,7 +34,7 @@ if __name__ == "__main__":
     fpath = './pred/0.7693305_Fix.tsv'
     pseudo_data_path = './data/pseudo_data.txt'
     read_output(fpath, pseudo_data_path)
-    # fpath = '/home/dy/Flat-Lattice-Transformer/data/pseudo_data.txt'
+    # fpath = '/home/dy/flat-chinese-ner/data/pseudo_data.txt'
     # t, m, _ = loadInputFile(fpath)
     # print(m[0:50])
 
