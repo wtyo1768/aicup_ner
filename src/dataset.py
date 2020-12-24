@@ -15,8 +15,8 @@ tagging_method = 'BI'
 #TODO
 token_continual_number = False
 USE_ALL_DATA_FOR_TRAIN = False
-fpath = '/home/dy/Flat-Lattice-Transformer/data/train_2.txt'
-aug_size = 1
+fpath = '/home/dy/flat-chinese-ner/data/train_2.txt'
+aug_size = 3
 model_teamwork = False
 remove_sentence_with_allO = False
 use_pseudo = False
@@ -44,7 +44,10 @@ model_type = {
         'location', 'education',
         'name', 'profession', 
     ],
-    'default' : ['money', 'med_exam', 'profession', 'education'],
+    'default' : [ 
+        'money', 'med_exam', 'profession', 'education', 'ID',
+        'contact', 'family'
+    ],
     'time' : ['time'],
 }
 break_word = ['。', '，', '!']
@@ -395,14 +398,11 @@ def sliding_window(sens, tags, max_len):
         # print('hey')
         # print(sentence[s_pos:e_pos+1])
         # break
-
     # for i in range(len(sens)):
     # print('Single sentence-------')
     # print(sens[0])
     # print('Joined sentence-------')
     # print(joined_sens[0])
-    
-
     return joined_sens, joined_tags
 
 
@@ -419,9 +419,7 @@ def augment(prefix, fold ,aug_type=[], augument_size=3):
     return aug_texts, aug_tags
 
 
-
-if __name__ == "__main__":
-    '''
+'''
     1. Data =>> Training, Validation (Sentence)
     
         Select type of tags to Augmentation
@@ -433,11 +431,10 @@ if __name__ == "__main__":
     4. Concat Augment and Training data. (Sentence)
 
         Augment data need to split into sentence
-    ''' 
-    if HANDLE =='default':
-        aug_type = ['family', 'location', 'education', 'profession', 'contact']
-    else:
-        aug_type = model_type[HANDLE]
+'''
+if __name__ == "__main__":
+        
+    aug_type = model_type[HANDLE]
     
     # if model_teamwork:
     #     # disjoint
@@ -485,23 +482,31 @@ if __name__ == "__main__":
         prefix = f'./data/fold{idx}/'
         write_ds(f'{prefix}dev/{HANDLE}', dev_text, dev_tags)
 
+        print('Origin sentence', len(orgin_train))
+
         # Augmentation Disabled 
         if aug_size==0:
+
             write_ds(f'{prefix}/train/{HANDLE}', orgin_train, orgin_tags)
             continue
         
         # Data Augmentation
-        filtered_texts, filtered_tags = filter_Otexts(orgin_train, orgin_tags, aug_type)
+        Aug_train, Aug_tag = sliding_window(orgin_train, orgin_tags, max_len)
+        # sliding_train, sliding_tags = sliding_window(orgin_train, orgin_tags, max_len)
+  
+        filtered_texts, filtered_tags = filter_Otexts(Aug_train, Aug_tag, aug_type)
         write_ds(f'{prefix}filtered/raw', filtered_texts, filtered_tags, split_sen=False)
+        
         aug_texts, aug_tags = augment(prefix, idx, aug_type=aug_type, augument_size=aug_size)
         aug_sen, sen_tags, _ = split_to_sentence(aug_texts, None, max_len, aug_tags)
         aug_sen, sen_tags = filter_Otexts(aug_sen, sen_tags, list(all_type))
        
         # Sliding window Augmentation
-        sliding_train, sliding_tags = sliding_window(orgin_train, orgin_tags, max_len)
-        orgin_train += sliding_train
-        orgin_tags += sliding_tags
-
+        # sliding_train, sliding_tags = sliding_window(orgin_train, orgin_tags, max_len)
+        # sliding_train, sliding_tags = filter_Otexts(sliding_train, sliding_tags, aug_type)
+        # orgin_train += sliding_train
+        # orgin_tags += sliding_tags
+        
         # Change tagging method
         if not tagging_method =='BI':
             sen_tags = fix_BIOES_tag(sen_tags)
@@ -515,12 +520,11 @@ if __name__ == "__main__":
         orgin_train, orgin_tags = zip(*shuffle(list(zip(orgin_train, orgin_tags))))
         write_ds(f'{prefix}/train/{HANDLE}', orgin_train, orgin_tags)
         
-        print('After augmentation', len(orgin_train))
         print('train:',len(orgin_train),
                 'val:',len(dev_text),)  
 
     # DEBUG
     if True:
-        write_ds('./debug_sliding.txt', sliding_train, sliding_tags)
+        write_ds('./debug_sliding.txt', aug_sen, sen_tags)
         write_ds('./debug.txt', orgin_train, orgin_tags)
         
