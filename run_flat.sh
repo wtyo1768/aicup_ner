@@ -31,7 +31,8 @@ python3 flat_main.py \
     --crf_lr 0.1 \
     --post 'n' \
     --k_proj true \
-    --head_dim 25 \
+    --head_dim 40 \
+    --head 6 \
     # --lr 6e-5 \
     # --bert_lr_rate 0.5 \
     # --embed_lr_rate 1

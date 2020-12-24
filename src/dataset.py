@@ -15,7 +15,7 @@ tagging_method = 'BI'
 #TODO
 token_continual_number = False
 USE_ALL_DATA_FOR_TRAIN = False
-fpath = '/home/dy/flat-chinese-ner/data/train_2.txt'
+fpath = '/home/dy/Flat-Lattice-Transformer/data/train_2.txt'
 aug_size = 3
 model_teamwork = False
 remove_sentence_with_allO = False
@@ -47,7 +47,7 @@ model_type = {
     'default' : [],
     'time' : ['time'],
 }
-
+break_word = ['。', '，', '!']
 
 def loadInputFile(path):  
     converter = opencc.OpenCC('t2s.json')
@@ -188,7 +188,6 @@ def preprocess_input(trainingset, position, add_prefix=True):
 def split_to_sentence(data:List[str], input_id_types, max_len, tags=None, cut=True):
     # 2 is num of special token added by tokenizer
     max_len = max_len - 2 
-    break_word = ['。', '，', '!']
     small_doc = []
     sentence = ''
     tmp = ''
@@ -355,6 +354,58 @@ def filter_Otexts(texts, tags, aug_type):
     return filtered_texts, filtered_tags
 
 
+def find_break_word(sens, mode=0):
+    if mode == 0 :
+        sens = list(reversed(sens))
+    for idx, word in enumerate(sens):
+        if word in break_word:
+            return idx+1
+
+
+def cut_to_max_len(sens, max_len):
+    # 0 for head, 1 for tail    
+    mode = 0
+    s_pos, e_pos = 0, len(sens) 
+    while (e_pos-s_pos) >= max_len:
+        if mode:
+            s_pos += find_break_word(sens[s_pos:e_pos], mode)
+        else: 
+            e_pos -= find_break_word(sens[s_pos:e_pos], mode)
+        mode = not mode
+    return s_pos, e_pos
+    
+
+def sliding_window(sens, tags, max_len):
+    joined_sens = []
+    joined_tags = []
+    
+    # combine the two sentence
+    for idx, sentence in enumerate(sens):
+        if idx == len(sens)-2:
+            break
+        joined_sens.append(sentence + sens[idx+1])
+        joined_tags.append(tags[idx]+ tags[idx+1])
+
+    # cut sentence by token 
+    for idx, sentence in enumerate(joined_sens):
+        s_pos, e_pos = cut_to_max_len(sentence, max_len)
+        # print(sentence)
+        joined_sens[idx] = sentence[s_pos:e_pos+1]
+        joined_tags[idx] = joined_tags[idx][s_pos:e_pos+1]
+        # print('hey')
+        # print(sentence[s_pos:e_pos+1])
+        # break
+
+    # for i in range(len(sens)):
+    # print('Single sentence-------')
+    # print(sens[0])
+    # print('Joined sentence-------')
+    # print(joined_sens[0])
+    
+
+    return joined_sens, joined_tags
+
+
 def augment(prefix, fold ,aug_type=[], augument_size=3):
     ner = Ner(
         ner_dir_name=prefix+'filtered',
@@ -421,9 +472,10 @@ if __name__ == "__main__":
         orgin_train, orgin_tags, _ = preprocess_input(train_set, train_pos)
         dev_text, dev_tags, _ =      preprocess_input(test_set, test_pos)
         
-        orgin_train, orgin_tags, _ = split_to_sentence(orgin_train, None, max_len, orgin_tags)
+        orgin_train, orgin_tags, _ = split_to_sentence(orgin_train, None, max_len, orgin_tags, cut=False)
         dev_text, dev_tags, _ =      split_to_sentence(dev_text, None, max_len, dev_tags)
-
+        # Only 3 sentence
+        
         if remove_sentence_with_allO:
             orgin_train, orgin_tags = filter_Otexts(orgin_train, orgin_tags, list(all_type))
             print('Sentence with valid tags', len(texts))
@@ -437,7 +489,13 @@ if __name__ == "__main__":
         if aug_size==0:
             write_ds(f'{prefix}/train/{HANDLE}', orgin_train, orgin_tags)
             continue
-        
+
+        # Sliding window Augmentation
+        sliding_train, sliding_tags = sliding_window(orgin_train, orgin_tags, max_len)
+
+        orgin_train += sliding_train
+        orgin_tags += sliding_tags
+
         # Data Augmentation
         filtered_texts, filtered_tags = filter_Otexts(orgin_train, orgin_tags, aug_type)
         write_ds(f'{prefix}filtered/raw', filtered_texts, filtered_tags, split_sen=False)
@@ -461,7 +519,9 @@ if __name__ == "__main__":
         print('After augmentation', len(orgin_train))
         print('train:',len(orgin_train),
                 'val:',len(dev_text),)  
+
     # DEBUG
     if True:
+        write_ds('./debug_sliding.txt', sliding_train, sliding_tags)
         write_ds('./debug.txt', orgin_train, orgin_tags)
         
