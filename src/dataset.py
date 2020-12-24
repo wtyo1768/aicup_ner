@@ -16,7 +16,7 @@ tagging_method = 'BI'
 token_continual_number = False
 USE_ALL_DATA_FOR_TRAIN = False
 fpath = '/home/dy/Flat-Lattice-Transformer/data/train_2.txt'
-aug_size = 3
+aug_size = 1
 model_teamwork = False
 remove_sentence_with_allO = False
 use_pseudo = False
@@ -44,7 +44,7 @@ model_type = {
         'location', 'education',
         'name', 'profession', 
     ],
-    'default' : [],
+    'default' : ['money', 'med_exam', 'profession', 'education'],
     'time' : ['time'],
 }
 break_word = ['。', '，', '!']
@@ -489,20 +489,19 @@ if __name__ == "__main__":
         if aug_size==0:
             write_ds(f'{prefix}/train/{HANDLE}', orgin_train, orgin_tags)
             continue
-
-        # Sliding window Augmentation
-        sliding_train, sliding_tags = sliding_window(orgin_train, orgin_tags, max_len)
-
-        orgin_train += sliding_train
-        orgin_tags += sliding_tags
-
+        
         # Data Augmentation
         filtered_texts, filtered_tags = filter_Otexts(orgin_train, orgin_tags, aug_type)
         write_ds(f'{prefix}filtered/raw', filtered_texts, filtered_tags, split_sen=False)
         aug_texts, aug_tags = augment(prefix, idx, aug_type=aug_type, augument_size=aug_size)
         aug_sen, sen_tags, _ = split_to_sentence(aug_texts, None, max_len, aug_tags)
         aug_sen, sen_tags = filter_Otexts(aug_sen, sen_tags, list(all_type))
-        
+       
+        # Sliding window Augmentation
+        sliding_train, sliding_tags = sliding_window(orgin_train, orgin_tags, max_len)
+        orgin_train += sliding_train
+        orgin_tags += sliding_tags
+
         # Change tagging method
         if not tagging_method =='BI':
             sen_tags = fix_BIOES_tag(sen_tags)
