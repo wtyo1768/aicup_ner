@@ -400,7 +400,7 @@ if args.model == 'transformer':
                 model_dir_or_name='cn-wwm',
                 requires_grad=False,
                 word_dropout=0.02,
-                layers='-1, 3',
+                layers='-1',
             )
         else:
             bert_embedding = None

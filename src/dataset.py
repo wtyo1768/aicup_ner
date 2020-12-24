@@ -16,7 +16,7 @@ tagging_method = 'BI'
 token_continual_number = False
 USE_ALL_DATA_FOR_TRAIN = False
 fpath = '/home/dy/flat-chinese-ner/data/train_2.txt'
-aug_size = 1
+aug_size = 3
 model_teamwork = False
 remove_sentence_with_allO = False
 use_pseudo = False
@@ -399,18 +399,14 @@ if __name__ == "__main__":
     
     # if not tagging_method == 'BI':
     #     tags = fix_BIOES_tag(tags)
-    # if True:
-    #     write_ds('./debug.txt', texts, tags)
-    # if use_pseudo:
-    #     docs = loadInputFile('./data/pseudo_data.txt', filter_type=filter_type)
-    #     pseudo_set, pseudo_pos, _ = parse_document(docs, filter_type=[]) 
-    #     pseudo_text, pseudo_tag, _ = preprocess_input(pseudo_set, pseudo_pos)
-    #     pseudo_text, pseudo_tag = filter_Otexts(pseudo_text, pseudo_tag, list(all_type))
-    #     pseudo_text, pseudo_tag, _ = split_to_sentence(pseudo_text, None, max_len, pseudo_tag)
-    #     texts += pseudo_text
-    #     tags += pseudo_tag
+    
+
+        # pseudo_set, pseudo_pos, _ = parse_document(docs, filter_type=[]) 
 
     docs = loadInputFile(fpath)
+    if use_pseudo:
+        pseudo_docs = loadInputFile('./data/pseudo_data.txt')
+
     docs = np.array(docs) 
     print('Origin docs...', docs.shape[0])
 
@@ -465,3 +461,7 @@ if __name__ == "__main__":
         print('After augmentation', len(orgin_train))
         print('train:',len(orgin_train),
                 'val:',len(dev_text),)  
+    # DEBUG
+    if True:
+        write_ds('./debug.txt', orgin_train, orgin_tags)
+        

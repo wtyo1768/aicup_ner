@@ -31,7 +31,7 @@ def read_output(path, outpath):
     
     
 if __name__ == "__main__":
-    fpath = './V1/0.7693305.tsv'
+    fpath = './pred/0.7693305_Fix.tsv'
     pseudo_data_path = './data/pseudo_data.txt'
     read_output(fpath, pseudo_data_path)
     # fpath = '/home/dy/flat-chinese-ner/data/pseudo_data.txt'
