@@ -7,6 +7,7 @@ import torch
 import sys
 import opencc
 from fastNLP import Vocabulary, DataSet
+from seqeval.metrics.sequence_labeling import get_entities
 
 
 max_len=128
@@ -33,24 +34,13 @@ few_type = {
     'others', 'organization', 'clinical_event', 
 }
 model_type = {
-    'minority' : [
-        'ID', 'education', 'family', 'profession',
-    ],
-    'number' : [
-        'money', 'time', 'med_exam', 'ID', 
-    ],
-    'string' : [
-        'money', 'time', 'contact', 'family',
-        'location', 'education',
-        'name', 'profession', 
-    ],
     'default' : [ 
-        'money', 'med_exam', 'profession', 'education', 'ID',
-        'contact', 'family'
+        'money', 'med_exam', 'ID',
+        'contact', 'family', 'profession',
     ],
-    'time' : ['time'],
 }
 break_word = ['。', '，', '!']
+
 
 def loadInputFile(path):  
     converter = opencc.OpenCC('t2s.json')
@@ -357,6 +347,29 @@ def filter_Otexts(texts, tags, aug_type):
     return filtered_texts, filtered_tags
 
 
+def remove_sentence_by_label(texts, tags, entype=['time']):
+    aug_type = [    
+        [f'B-{tag}', f'I-{tag}'] for tag in entype 
+    ]
+    aug_type = [atype for sublist in aug_type for atype in sublist]
+
+    filtered_texts = []
+    filtered_tags = []
+    for i, sentence_tag in enumerate(tags):
+        have_entity=[]
+        sentence_tag = np.array(sentence_tag)
+        for entity_type in aug_type:
+            have_entity.append(np.any(sentence_tag == entity_type))
+
+        if np.any(have_entity):
+            pass
+        else:
+            filtered_texts.append(texts[i])
+            filtered_tags.append(sentence_tag)
+
+    return filtered_texts, filtered_tags
+
+
 def find_break_word(sens, mode=0):
     if mode == 0 :
         sens = list(reversed(sens))
@@ -418,6 +431,19 @@ def augment(prefix, fold ,aug_type=[], augument_size=3):
     write_ds(f'./data/visualize/raw{fold}', aug_texts, aug_tags)
     return aug_texts, aug_tags
 
+def summary_data(tags):
+    total_entity = []
+
+    for sen_tag in tags:
+        entitys = get_entities(sen_tag)
+        entitys = [ele[0] for ele in entitys]
+        total_entity += entitys
+    unique, counts = np.unique(total_entity, return_counts=True)
+
+    print('Entities for training:\n',dict(zip(unique, counts)))
+    return 
+    
+
 
 '''
     1. Data =>> Training, Validation (Sentence)
@@ -447,9 +473,7 @@ if __name__ == "__main__":
     
     # if not tagging_method == 'BI':
     #     tags = fix_BIOES_tag(tags)
-    
-
-        # pseudo_set, pseudo_pos, _ = parse_document(docs, filter_type=[]) 
+    # pseudo_set, pseudo_pos, _ = parse_document(docs, filter_type=[]) 
 
     docs = loadInputFile(fpath)
     if use_pseudo:
@@ -471,13 +495,12 @@ if __name__ == "__main__":
         
         orgin_train, orgin_tags, _ = split_to_sentence(orgin_train, None, max_len, orgin_tags, cut=False)
         dev_text, dev_tags, _ =      split_to_sentence(dev_text, None, max_len, dev_tags)
-        # Only 3 sentence
         
+
         if remove_sentence_with_allO:
             orgin_train, orgin_tags = filter_Otexts(orgin_train, orgin_tags, list(all_type))
             print('Sentence with valid tags', len(texts))
 
-        
         print(f'--------Fold {idx}----------')
         prefix = f'./data/fold{idx}/'
         write_ds(f'{prefix}dev/{HANDLE}', dev_text, dev_tags)
@@ -486,27 +509,22 @@ if __name__ == "__main__":
 
         # Augmentation Disabled 
         if aug_size==0:
-
+            print('No augmentation...')
+            summary_data(orgin_tags)
             write_ds(f'{prefix}/train/{HANDLE}', orgin_train, orgin_tags)
             continue
         
         # Data Augmentation
         Aug_train, Aug_tag = sliding_window(orgin_train, orgin_tags, max_len)
         # sliding_train, sliding_tags = sliding_window(orgin_train, orgin_tags, max_len)
-  
-        filtered_texts, filtered_tags = filter_Otexts(Aug_train, Aug_tag, aug_type)
+        filtered_texts, filtered_tags = remove_sentence_by_label(Aug_train, Aug_tag, ['time'])
+        # filtered_texts, filtered_tags = filter_Otexts(Aug_train, Aug_tag, aug_type)
         write_ds(f'{prefix}filtered/raw', filtered_texts, filtered_tags, split_sen=False)
         
         aug_texts, aug_tags = augment(prefix, idx, aug_type=aug_type, augument_size=aug_size)
         aug_sen, sen_tags, _ = split_to_sentence(aug_texts, None, max_len, aug_tags)
-        aug_sen, sen_tags = filter_Otexts(aug_sen, sen_tags, list(all_type))
+        # aug_sen, sen_tags = filter_Otexts(aug_sen, sen_tags, list(all_type))
        
-        # Sliding window Augmentation
-        # sliding_train, sliding_tags = sliding_window(orgin_train, orgin_tags, max_len)
-        # sliding_train, sliding_tags = filter_Otexts(sliding_train, sliding_tags, aug_type)
-        # orgin_train += sliding_train
-        # orgin_tags += sliding_tags
-        
         # Change tagging method
         if not tagging_method =='BI':
             sen_tags = fix_BIOES_tag(sen_tags)
@@ -518,6 +536,7 @@ if __name__ == "__main__":
         orgin_train += aug_sen
         orgin_tags += sen_tags
         orgin_train, orgin_tags = zip(*shuffle(list(zip(orgin_train, orgin_tags))))
+        summary_data(orgin_tags)
         write_ds(f'{prefix}/train/{HANDLE}', orgin_train, orgin_tags)
         
         print('train:',len(orgin_train),
@@ -525,6 +544,6 @@ if __name__ == "__main__":
 
     # DEBUG
     if True:
-        write_ds('./debug_sliding.txt', aug_sen, sen_tags)
         write_ds('./debug.txt', orgin_train, orgin_tags)
-        
+        if aug_size:
+            write_ds('./debug_sliding.txt', aug_sen, sen_tags)

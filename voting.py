@@ -23,9 +23,9 @@ def vote(all_pred):
 if __name__ == "__main__":
 
     total_pred = []
-    Model='flat'
-    for i in range(4):
-        total_pred.append(np.load(f'./pred/{Model}/{i}.npy'))
+    for Model in ['flat', 'bert']:
+        for i in range(5):
+            total_pred.append(np.load(f'./pred/{Model}/{i}.npy'))
     
     vote_result = vote(total_pred)
     dev_data = load_dev()
@@ -37,7 +37,7 @@ if __name__ == "__main__":
         offset_map.append(map_arr)
 
     label_vocab = get_label_vocab(data_type='default')
-    print(label_vocab.to_word(20))
+
     pred = [label_vocab.to_word(ele) for ele in vote_result]
     pred_per_article = split_to_pred_per_article([pred], count_article_length(dev_data))
     print('writing file...')

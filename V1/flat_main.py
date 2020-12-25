@@ -408,7 +408,8 @@ if args.model == 'transformer':
             model = BERT_SeqLabel(
                 bert_embedding,
                 len(vocabs['label']),
-                vocabs,args.after_bert,
+                vocabs,
+                args.after_bert,
                 use_pos_tag=args.use_pos_tag
             )
         else:
@@ -460,7 +461,8 @@ if args.model == 'transformer':
 elif args.model =='lstm':
     model = LSTM_SeqLabel(embeddings['char'],embeddings['bigram'],embeddings['bigram'],args.hidden,
                                len(vocabs['label']),
-                          bidirectional=True,device=device,
+                          bidirectional=True,
+                          device=device,
                           embed_dropout=args.embed_dropout,output_dropout=args.output_dropout,use_bigram=True,
                           debug=args.debug)
 

@@ -35,7 +35,6 @@ python3 flat_main.py \
     --head 8 \
     # --lr 6e-5 \
     # --bert_lr_rate 0.5 \
-    # --embed_lr_rate 1
 
 # TODO 等價字替換 nlpcda
 # tune position embedding
