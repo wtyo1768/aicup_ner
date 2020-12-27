@@ -18,21 +18,22 @@ python3 flat_main.py \
     --warmup 0.1 \
     --optim 'adam' \
     --fix_bert_epoch 0 \
+    --fix_embed_epoch 10 \
     --epoch 15 \
     --batch 16 \
     --status 'train' \
     --lexicon_name 'lk' \
     --bigram_min_freq 1 \
-    --embed_lr_rate 1.3 \
+    --embed_lr_rate .001 \
     --fold 4 \
     --use_abs_pos false \
     --use_rel_pos true \
     --do_pred 1 \
-    --crf_lr 0.1 \
+    --crf_lr 0.01 \
     --post 'n' \
     --k_proj true \
-    --head_dim 20 \
-    --head 8 \
+    --head_dim 40 \
+    --head 4 \
     # --lr 6e-5 \
     # --bert_lr_rate 0.5 \
 

@@ -22,7 +22,7 @@ def load_aicup_ner(
     char_word_dropout=0.01,
     only_train_min_freq=0,
     bigram_min_freq=1,
-    data_type='string',
+    data_type='default',
     index_token=True,
     char_min_freq=1,
     cv=False,

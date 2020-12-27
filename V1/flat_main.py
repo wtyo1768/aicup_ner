@@ -59,6 +59,7 @@ parser.add_argument('--status',choices=['train','test', 'bagging'],default='trai
 parser.add_argument('--use_bert',type=int,default=1)
 parser.add_argument('--only_bert',type=int,default=0)
 parser.add_argument('--fix_bert_epoch',type=int,default=20)
+parser.add_argument('--fix_embed_epoch',type=int,default=10)
 parser.add_argument('--after_bert',default='mlp',choices=['lstm','mlp'])
 parser.add_argument('--msg',default='11266')
 parser.add_argument('--train_clip',default=False,help='是不是要把train的char长度限制在200以内')
@@ -606,10 +607,11 @@ def create_cb():
             clip_callback,
             save_callback,
         ]
+    # callbacks.append(Unfreeze_Callback(embedding_param ,args.fix_embed_epoch))
 
     if args.use_bert:
         if args.fix_bert_epoch != 0:
-            callbacks.append(Unfreeze_Callback(bert_embedding,args.fix_bert_epoch))
+            callbacks.append(Unfreeze_Callback(model.lattice_embed, args.fix_bert_epoch))
         else:
             bert_embedding.requires_grad = True
 

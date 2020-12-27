@@ -19,13 +19,13 @@ do
         --after_bert 'mlp' \
         --warmup 0.1 \
         --optim 'adam' \
-        --fix_bert_epoch 1 \
+        --fix_bert_epoch 0 \
         --epoch 15 \
-        --batch 16 \
+        --batch 8 \
         --status 'train' \
         --lexicon_name 'lk' \
         --bigram_min_freq 1 \
-        --embed_lr_rate 1.3 \
+        --embed_lr_rate 0.7 \
         --fold $i \
         --use_abs_pos false \
         --use_rel_pos true \

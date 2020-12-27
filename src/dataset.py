@@ -17,10 +17,11 @@ tagging_method = 'BI'
 token_continual_number = False
 USE_ALL_DATA_FOR_TRAIN = False
 fpath = '/home/dy/flat-chinese-ner/data/train_2.txt'
-aug_size = 3
+# fpath = '/home/dy/flat-chinese-ner/data/train_2 copy.txt'
+aug_size = 1
 model_teamwork = False
 remove_sentence_with_allO = False
-use_pseudo = False
+use_pseudo = True
 HANDLE = 'default'
 role_map = {
     '_' : 0, '*' : 1, '^' : 1,
@@ -35,8 +36,7 @@ few_type = {
 }
 model_type = {
     'default' : [ 
-        'money', 'med_exam', 'ID',
-        'contact', 'family', 'profession',
+        'ID', 'contact', 'family', 'profession', 'money', 'education', 'med_exam'
     ],
 }
 break_word = ['。', '，', '!']
@@ -304,7 +304,7 @@ def write_ds(outfile, texts, tags, split_sen=True):
     out = ''
     for a_id, doc in enumerate(texts):
         for idx, word in enumerate(doc):
-            if word == ' ':
+            if word== ' ' or word == '　':
                 continue
             # print(word, tags[a_id][idx])
             out += f'{word}\t{tags[a_id][idx]}\n' 
@@ -419,7 +419,7 @@ def sliding_window(sens, tags, max_len):
     return joined_sens, joined_tags
 
 
-def augment(prefix, fold ,aug_type=[], augument_size=3):
+def augment(prefix, fold, fname, aug_type=[], augument_size=3):
     ner = Ner(
         ner_dir_name=prefix+'filtered',
         ignore_tag_list=['O'],
@@ -427,9 +427,10 @@ def augment(prefix, fold ,aug_type=[], augument_size=3):
         augument_size=augument_size, 
         seed=0
     )
-    aug_texts, aug_tags = ner.augment(file_name=f'{prefix}filtered/raw')
-    write_ds(f'./data/visualize/raw{fold}', aug_texts, aug_tags)
+    aug_texts, aug_tags = ner.augment(file_name=f'{prefix}filtered/{fname}')
+    write_ds(f'./data/visualize/fname{fold}', aug_texts, aug_tags)
     return aug_texts, aug_tags
+
 
 def summary_data(tags):
     total_entity = []
@@ -473,77 +474,121 @@ if __name__ == "__main__":
     
     # if not tagging_method == 'BI':
     #     tags = fix_BIOES_tag(tags)
-    # pseudo_set, pseudo_pos, _ = parse_document(docs, filter_type=[]) 
+
 
     docs = loadInputFile(fpath)
-    if use_pseudo:
-        pseudo_docs = loadInputFile('./data/pseudo_data.txt')
-
-    docs = np.array(docs) 
-    print('Origin docs...', docs.shape[0])
-
+    train_set, train_pos, _ = parse_document(docs, filter_type=[])
+    texts, tags, _ = preprocess_input(train_set, train_pos)
+    texts, tags, _ = split_to_sentence(texts, None, max_len, tags, cut=False)
+    
+    # if use_pseudo:
+    #     pseudo_docs = loadInputFile('./data/pseudo_data.txt')
+    #     pseudo_set,  pseudo_pos, _ = parse_document(pseudo_docs, filter_type=[]) 
+    #     pseudo_text, pseudo_tag, _ = preprocess_input(pseudo_set, pseudo_pos)
+    #     pseudo_text, pseudo_tag, _ = split_to_sentence(pseudo_text, None, max_len, pseudo_tag, cut=False)
+    
+        # origin_train += pseudo_text
+        # origin_tags +=pseudo_tag
+    docs = np.array(docs)
+    # pseudo_text, pseudo_tags = np.array(pseudo_text), np.array(pseudo_tag)
+    texts, tags = np.array(texts, dtype=object), np.array(tags, dtype=object)
+    # print('Origin docs...', docs.shape[0])
     # Kfold split
-    kf = ShuffleSplit(n_splits=5, test_size=0.3, random_state=0)
+    kf = ShuffleSplit(n_splits=5, test_size=0.2, random_state=0)
     for idx, (train, test) in enumerate(kf.split(docs)):
+        # pseudo_train,  pseudo_tag = pseudo_text[train].tolist(), pseudo_tags[train].tolist()
+        # dev_text, dev_tags = pseudo_text[test].tolist(), pseudo_tags[test].tolist()
+        
+        # origin_train = texts.copy()
+        # origin_tags = tags.copy()
         train_docs, test_docs = docs[train].tolist(), docs[test].tolist()
         
         train_set, train_pos, _ = parse_document(train_docs, filter_type=[])
         test_set, test_pos, _   = parse_document(test_docs, filter_type=[])
         
-        orgin_train, orgin_tags, _ = preprocess_input(train_set, train_pos)
+        origin_train, origin_tags, _ = preprocess_input(train_set, train_pos)
         dev_text, dev_tags, _ =      preprocess_input(test_set, test_pos)
         
-        orgin_train, orgin_tags, _ = split_to_sentence(orgin_train, None, max_len, orgin_tags, cut=False)
+        origin_train, origin_tags, _ = split_to_sentence(origin_train, None, max_len, origin_tags, cut=False)
         dev_text, dev_tags, _ =      split_to_sentence(dev_text, None, max_len, dev_tags)
         
-
         if remove_sentence_with_allO:
-            orgin_train, orgin_tags = filter_Otexts(orgin_train, orgin_tags, list(all_type))
+            origin_train, origin_tags = filter_Otexts(origin_train, origin_tags, aug_type)
             print('Sentence with valid tags', len(texts))
 
         print(f'--------Fold {idx}----------')
         prefix = f'./data/fold{idx}/'
         write_ds(f'{prefix}dev/{HANDLE}', dev_text, dev_tags)
 
-        print('Origin sentence', len(orgin_train))
+        print('Origin sentence', len(origin_train))
 
         # Augmentation Disabled 
         if aug_size==0:
             print('No augmentation...')
-            summary_data(orgin_tags)
-            write_ds(f'{prefix}/train/{HANDLE}', orgin_train, orgin_tags)
+            summary_data(origin_tags)
+            write_ds(f'{prefix}/train/{HANDLE}', origin_train, origin_tags)
             continue
+
+        # Augmentation set
+        write_ds(f'{prefix}filtered/aug_set', origin_train, origin_tags, split_sen=False)
         
-        # Data Augmentation
-        Aug_train, Aug_tag = sliding_window(orgin_train, orgin_tags, max_len)
-        # sliding_train, sliding_tags = sliding_window(orgin_train, orgin_tags, max_len)
+        # Normal aug
+        filtered_texts, filtered_tags = remove_sentence_by_label(origin_train, origin_tags, ['time'])
+        filtered_texts, filtered_tags = filter_Otexts(filtered_texts, filtered_tags, aug_type)
+
+        write_ds(f'{prefix}filtered/normal', filtered_texts, filtered_tags, split_sen=False)
+        aug_origin_texts, aug_origin_tags = augment(
+            prefix, 
+            idx, 
+            'normal', 
+            aug_type=aug_type, 
+            augument_size=aug_size
+        )
+
+        aug_origin_texts, aug_origin_tags, _ = split_to_sentence(aug_origin_texts, None, max_len, aug_origin_tags)
+        print('Sentence with Normal augmentation', len(aug_origin_tags))
+
+        # Window Aug
+        Aug_train, Aug_tag = sliding_window(origin_train, origin_tags, max_len)
         filtered_texts, filtered_tags = remove_sentence_by_label(Aug_train, Aug_tag, ['time'])
-        # filtered_texts, filtered_tags = filter_Otexts(Aug_train, Aug_tag, aug_type)
-        write_ds(f'{prefix}filtered/raw', filtered_texts, filtered_tags, split_sen=False)
-        
-        aug_texts, aug_tags = augment(prefix, idx, aug_type=aug_type, augument_size=aug_size)
+        filtered_texts, filtered_tags = filter_Otexts(filtered_texts, filtered_tags, list(all_type))
+        write_ds(f'{prefix}filtered/window', filtered_texts, filtered_tags, split_sen=False)
+        aug_texts, aug_tags = augment(
+            prefix, 
+            idx, 
+            'window', 
+            aug_type=aug_type,
+            augument_size=aug_size
+        )
         aug_sen, sen_tags, _ = split_to_sentence(aug_texts, None, max_len, aug_tags)
-        # aug_sen, sen_tags = filter_Otexts(aug_sen, sen_tags, list(all_type))
-       
+        print('Sentence with Window augmentation', len(sen_tags))
+
+        # Concat Two aug
+        aug_sen += aug_origin_texts
+        sen_tags += aug_origin_tags
+
         # Change tagging method
         if not tagging_method =='BI':
             sen_tags = fix_BIOES_tag(sen_tags)
-
-        print('Sentence to augmentation', len(filtered_texts))
-        print('Augmented sentence', len(aug_sen))
+        # print('Pseudo sentence', len(pseudo_train))
+        print('Total Augmented sentence', len(aug_sen))
         
         # Concat augmented sample
-        orgin_train += aug_sen
-        orgin_tags += sen_tags
-        orgin_train, orgin_tags = zip(*shuffle(list(zip(orgin_train, orgin_tags))))
-        summary_data(orgin_tags)
-        write_ds(f'{prefix}/train/{HANDLE}', orgin_train, orgin_tags)
-        
-        print('train:',len(orgin_train),
+
+        origin_train += aug_sen
+        origin_tags += sen_tags
+
+        # origin_train += pseudo_train
+        # origin_tags += pseudo_tag
+
+        origin_train, origin_tags = zip(*shuffle(list(zip(origin_train, origin_tags))))
+        summary_data(origin_tags)
+        write_ds(f'{prefix}/train/{HANDLE}', origin_train, origin_tags)
+        print('train:',len(origin_train),
                 'val:',len(dev_text),)  
 
     # DEBUG
     if True:
-        write_ds('./debug.txt', orgin_train, orgin_tags)
+        write_ds('./debug.txt', origin_train, origin_tags)
         if aug_size:
             write_ds('./debug_sliding.txt', aug_sen, sen_tags)

@@ -23,7 +23,7 @@ def vote(all_pred):
 if __name__ == "__main__":
 
     total_pred = []
-    for Model in ['flat', 'bert']:
+    for Model in ['flat']:
         for i in range(5):
             total_pred.append(np.load(f'./pred/{Model}/{i}.npy'))
     
