@@ -9,6 +9,7 @@ python3 flat_main.py \
     --layer 1 \
     --use_bigram 0 \
     --use_pos_tag 0 \
+    --model_type 'bert' \
     --lattice 1 \
     --use_bert 1 \
     --only_bert 1 \

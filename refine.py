@@ -9,7 +9,7 @@ def drop_tokens(path):
     data = pd.read_csv(path, sep='\t').to_numpy()
 
     output="article_id\tstart_position\tend_position\tentity_text\tentity_type\n"
-    mark = [':', '，', ',', '!', '。', '.']
+    mark = [':', '，', ',', '!', '。', '.', ' ']
     for i in range(len(data)):
         # 去除頭部符號
         if data[i][3][0] in mark: 
@@ -32,7 +32,7 @@ def drop_tokens(path):
 
 
 def write_res(output):
-    with open('./V1/refined.tsv','w',encoding='utf-8') as f:
+    with open('./V1/refined_add_location.tsv','w',encoding='utf-8') as f:
         f.write(output)
     return
 
@@ -79,107 +79,56 @@ def write_refined(refined):
         for ele in refined[k]:
             line = f'{k}\t{ele[0]}\t{ele[1]}\t{ele[2]}\t{ele[3]}\n'
             output+=line
-    with open('./V1/refined.tsv','w',encoding='utf-8') as f:
+    with open('./V1/refined_add_location.tsv','w',encoding='utf-8') as f:
         f.write(output)
     
-    
+def rule(origin_text, pred_result, r, length, entity, replace, ignorecase=True):
+    for arti_id in range(len(origin_text)):
+        if ignorecase:
+            pattern = re.compile(r, re.I)
+        else:
+            pattern = re.compile(r)
+        match = pattern.findall(origin_text[arti_id])
+        #print(match)
+        beg_tmp = -1
+        for i in range(len(match)): 
+            position = origin_text[arti_id].find(match[i], beg_tmp+1)
+            beg_tmp = position
+            pred_result = is_entity_predicted(pred_result, arti_id, position, length-1)
+
+            if replace:
+                arr = np.array([position, position+length, match[i], entity])
+                pred_result[str(arti_id)] = np.append(pred_result[str(arti_id)], arr).reshape(-1,4)
+    return pred_result
+
 def refine_output(pred_result):
     # ex = extractor()
     origin_text = load_dev(simplify=False)
 
-    # 一條一條的看TEST DATA，抓出身分證號碼
-    for arti_id in range(len(origin_text)):
-        pattern = re.compile("[A-Z]{1}[1-2]{1}[0-9]{8}", re.I) 
-        id_match = pattern.findall(origin_text[arti_id])
-        for i in range(len(id_match)):
-            position = origin_text[arti_id].find(id_match[i])
-
-            pred_result = is_entity_predicted(pred_result, arti_id, position, 9)
-            arr = np.array([position, position+10, id_match[i], 'ID'])
-            pred_result[str(arti_id)] = np.append(pred_result[str(arti_id)], arr).reshape(-1,4)
-
-    # 一條一條的看TEST DATA，抓出手機號碼
-    for arti_id in range(len(origin_text)):
-        pattern = re.compile("09[0-9]{8}", re.I)
-        phone_match = pattern.findall(origin_text[arti_id])
-        for i in range(len(phone_match)):
-            position = origin_text[arti_id].find(phone_match[i])
-
-            pred_result = is_entity_predicted(pred_result, arti_id, position, 9)
-            arr = np.array([position, position+10, phone_match[i], 'contact'])
-            pred_result[str(arti_id)] = np.append(pred_result[str(arti_id)], arr).reshape(-1,4)
-
-    # 一條一條的看TEST DATA，抓出google
-    for arti_id in range(len(origin_text)):
-        pattern = re.compile("google", re.I)
-        google_match = pattern.findall(origin_text[arti_id])
-        for i in range(len(google_match)):
-            position = origin_text[arti_id].find(google_match[i])
-
-            pred_result = is_entity_predicted(pred_result, arti_id, position, 5)
-            arr = np.array([position, position+6, google_match[i], 'profession'])
-            pred_result[str(arti_id)] = np.append(pred_result[str(arti_id)], arr).reshape(-1,4)
-    
-    # 一條一條的看TEST DATA，抓出line
-    for arti_id in range(len(origin_text)):
-        pattern = re.compile("line", re.I)
-        line_match = pattern.findall(origin_text[arti_id])
-        for i in range(len(line_match)):
-            position = origin_text[arti_id].find(line_match[i])
-
-            pred_result = is_entity_predicted(pred_result, arti_id, position, 3)
-            arr = np.array([position, position+4, line_match[i], 'contact'])
-            pred_result[str(arti_id)] = np.append(pred_result[str(arti_id)], arr).reshape(-1,4)
-    
-    # 一條一條的看TEST DATA，抓出cd4
-    for arti_id in range(len(origin_text)):
-        pattern = re.compile("cd4", re.I)
-        cd4_match = pattern.findall(origin_text[arti_id])
-        for i in range(len(cd4_match)):
-            position = origin_text[arti_id].find(cd4_match[i])
-
-            pred_result = is_entity_predicted(pred_result, arti_id, position, 2)
-            # arr = np.array([position, position+6, cd4_match[i], 'contact'])
-            #pred_result[str(arti_id)] = np.append(pred_result[str(arti_id)], arr).reshape(-1,4)
-    
+    pred_result = rule(origin_text, pred_result, "[A-Z]{1}[1-2]{1}[0-9]{8}", 10, "ID", True)
+    pred_result = rule(origin_text, pred_result, "09[0-9]{8}", 10, "contact", True)
+    pred_result = rule(origin_text, pred_result, "google", 6, "profession", True)
+    pred_result = rule(origin_text, pred_result, "line", 4, "contact", True)
+    pred_result = rule(origin_text, pred_result, "cd4", 3, "", False)
+    pred_result = rule(origin_text, pred_result, "N95", 3, "", False)
+    pred_result = rule(origin_text, pred_result, "h1n1", 4, "clinical_event", True)
+    pred_result = rule(origin_text, pred_result, "sars", 4, "clinical_event", True)
+    pred_result = rule(origin_text, pred_result, "PrEP", 4, "", False, ignorecase = False)
+    pred_result = rule(origin_text, pred_result, "信心", 2, "location", True, ignorecase = False)
     return pred_result    
-
-                
-            
-
-        # if not str(arti_id) in pred_result.keys():
-        #     continue
-        # arti_pred = pred_result[str(arti_id)]
-    
-        # mail = ex.extract_email(origin_text[arti_id])
-        # cellphones = ex.extract_cellphone(origin_text[arti_id], nation='CHN')
-        # locations = ex.extract_locations(origin_text[arti_id])
-        # times = ex.extract_time(origin_text[arti_id])
-        # name = ex.extract_name(origin_text[arti_id])
-
-        # if times:
-        #     print(times)
-        # if name:
-        #     print(name)
-
-        # if mail:
-        #     print(mail)
-        # if cellphones:
-        #     print(cellphones)
-        # if locations:
-        #     print(locations)
 
 
 if __name__ == "__main__":
     # 先將錯誤的符號去除, 寫在refine.tsv中
-    path = './V1/output.tsv'
+    path = './V1/refined信心.tsv'
     output = drop_tokens(path)
     write_res(output)
 
     # 生成dict {artical id:[[ ],[ ],[ ]]}
-    path = './V1/refined.tsv'
+    path = './V1/refined_add_location.tsv'
     pred_res = get_pred_output(path) 
 
     # 用RULES抓取一些東西
     refined = refine_output(pred_res) #別人寫好的抓資料
     write_refined(refined)
+

@@ -22,8 +22,13 @@ def vote(all_pred):
 if __name__ == "__main__":
 
     total_pred = []
-    for i in range(4):
-        total_pred.append(np.load(f'./V1/pred/pred{i}.npy'))
+    
+    for m in ['flat_lk']:
+        for i in range(10):
+            total_pred.append(np.load(f'./pred/{m}/{i}.npy'))
+    for m in ['flat']:
+        for i in range(10):
+            total_pred.append(np.load(f'./pred/{m}/{i}.npy'))
     
     vote_result = vote(total_pred)
     dev_data = load_dev()
@@ -43,7 +48,7 @@ if __name__ == "__main__":
         pred_per_article, 
         offset_map, 
         origin_data, 
-        output_path='./bagging.tsv'
+        output_path='./pred/bagging.tsv'
     )
     # print(voted_res)
     # print(np.stack([np.ones(3), np.zeros(3) ], axis=-1))

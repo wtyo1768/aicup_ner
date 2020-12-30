@@ -49,7 +49,7 @@ parser = argparse.ArgumentParser()
 # performance inrelevant
 parser.add_argument('--cv',type=bool,default=False)
 parser.add_argument('--crf_lr',type=float,default=0.1)
-
+parser.add_argument('--model_type',type=str,default='flat')
 parser.add_argument('--data_type',type=str,default='few')
 parser.add_argument('--fold',type=int,default=0)
 parser.add_argument('--use_pos_tag', type=int, default=0, required=True)
@@ -125,7 +125,7 @@ parser.add_argument('--use_rel_pos',default=True)
 #相对位置和绝对位置不是对立的，可以同时使用
 parser.add_argument('--rel_pos_shared',default=True)
 parser.add_argument('--add_pos', default=False)
-parser.add_argument('--learn_pos', default=False)
+parser.add_argument('--learn_pos', default=False, type=bool)
 parser.add_argument('--pos_norm',default=False)
 parser.add_argument('--rel_pos_init',default=1)
 parser.add_argument('--four_pos_shared',default=True,help='只针对相对位置编码，指4个位置编码是不是共享权重')
@@ -686,22 +686,20 @@ if args.status == 'train':
         pred = model.predict(
             datasets['aicup_dev'],
             seq_len_field_name='seq_len',)['pred']
-        print(pred[0][0:20])
         convert_pred_and_write(
             pred,
-            f'./pred/pred{args.fold}.npy', 
+            f'../pred/{args.model_type}/{args.fold}.npy', 
             vocabs['label']
         )
         # print('-----------VOCAB------------')
-        # print(list(vocabs['target']))
         write_pred_tsv(pred)
 else:
     models_path = [
-        '/home/dy/Flat-Lattice-Transformer/model/default/fold0/2020-12-21-08-46-26/epoch-11_step-2002_f-0.769890.pt',
-        '/home/dy/Flat-Lattice-Transformer/model/default/fold1/2020-12-21-09-02-29/epoch-15_step-2730_f-0.776722.pt',
-        '/home/dy/Flat-Lattice-Transformer/model/default/fold2/2020-12-21-09-18-33/epoch-10_step-1810_f-0.769046.pt',
-        '/home/dy/Flat-Lattice-Transformer/model/default/fold3/2020-12-21-09-32-06/epoch-8_step-1456_f-0.788785.pt',
-        '/home/dy/Flat-Lattice-Transformer/model/default/fold4/2020-12-21-09-48-03/epoch-14_step-2548_f-0.769837.pt',
+        '/home/dy/flat-chinese-ner/model/default/fold0/2020-12-21-08-46-26/epoch-11_step-2002_f-0.769890.pt',
+        '/home/dy/flat-chinese-ner/model/default/fold1/2020-12-21-09-02-29/epoch-15_step-2730_f-0.776722.pt',
+        '/home/dy/flat-chinese-ner/model/default/fold2/2020-12-21-09-18-33/epoch-10_step-1810_f-0.769046.pt',
+        '/home/dy/flat-chinese-ner/model/default/fold3/2020-12-21-09-32-06/epoch-8_step-1456_f-0.788785.pt',
+        '/home/dy/flat-chinese-ner/model/default/fold4/2020-12-21-09-48-03/epoch-14_step-2548_f-0.769837.pt',
     ]
     mpath = models_path[args.fold]
     print('predicting...')

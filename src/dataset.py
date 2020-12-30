@@ -8,7 +8,7 @@ import sys
 import opencc
 
 
-fpath = '/home/dy/Flat-Lattice-Transformer/data/train_2.txt'
+fpath = '/home/dy/flat-chinese-ner/data/train_2.txt'
 USE_ALL_DATA_FOR_TRAIN = False
 max_len=128
 tagging_method = 'BI'
@@ -369,7 +369,7 @@ def generate_type_id(doc, offset_map):
     return type_id
 
 
-def get_label(path='/home/dy/Flat-Lattice-Transformer/data/train_2.txt'):
+def get_label(path='/home/dy/flat-chinese-ner/data/train_2.txt'):
     labels = list()
     with open(path, 'r', encoding='utf8') as f:
         file_text=f.read().encode('utf-8').decode('utf-8-sig')
@@ -487,7 +487,7 @@ model_type = {
 aug_size = 3
 model_teamwork = False
 remove_sentence_with_allO = False
-use_pseudo = True
+use_pseudo = False
 
 if __name__ == "__main__":
     '''
@@ -501,11 +501,11 @@ if __name__ == "__main__":
 
     4. Concat Augment and Training data. (Sentence)
 
-        Augment data need to split into sentence
+        Augment data need to split into sentence 
     ''' 
     # 
     if HANDLE =='default':
-        aug_type = ['family', 'location', 'education', 'profession', 'contact']
+        aug_type = ['family', 'location', 'education', 'profession', 'contact', 'ID', ]
     else:
         aug_type = model_type[HANDLE]
     
@@ -519,13 +519,10 @@ if __name__ == "__main__":
     texts, tags, input_id_types = preprocess_input(trainingset, position)
     texts, tags, _ = split_to_sentence(texts, input_id_types, max_len, tags)
     
-   
-    
-    
     if use_pseudo:
         pseudo_set, pseudo_pos, _ = loadInputFile('./data/pseudo_data.txt', filter_type=[])
         pseudo_text, pseudo_tag, _ = preprocess_input(pseudo_set, pseudo_pos)
-        pseudo_text, pseudo_tag =filter_Otexts(pseudo_text, pseudo_tag, list(all_type))
+        pseudo_text, pseudo_tag = filter_Otexts(pseudo_text, pseudo_tag, list(all_type))
         pseudo_text, pseudo_tag, _ = split_to_sentence(pseudo_text, None, max_len, pseudo_tag)
         texts += pseudo_text
         tags += pseudo_tag
@@ -537,7 +534,7 @@ if __name__ == "__main__":
     print('Using label:', set(list(labels.values())))
     print('Origin sentence...', len(texts))
     # Kfold split
-    kf = ShuffleSplit(n_splits=5, test_size=0.2, random_state=0)
+    kf = ShuffleSplit(n_splits=10, test_size=0.1, random_state=0)
     
     for idx, (train, test) in enumerate(kf.split(texts)):
         orgin_train, orgin_tags = texts[train].tolist(), tags[train].tolist()
@@ -545,7 +542,6 @@ if __name__ == "__main__":
         if remove_sentence_with_allO:
             orgin_train, orgin_tags = filter_Otexts(orgin_train, orgin_tags, list(all_type))
             print('Sentence with valid tags', len(texts))
-
 
         print(f'--------Fold {idx}----------')
         filtered_texts, filtered_tags = filter_Otexts(orgin_train, orgin_tags, aug_type)
@@ -563,7 +559,6 @@ if __name__ == "__main__":
         aug_texts, aug_tags = augment(prefix, idx, aug_type=aug_type, augument_size=aug_size)
         write_ds(f'{prefix}dev/{HANDLE}', dev_text, dev_tags)
         
-
         aug_sen, sen_tags, _ = split_to_sentence(aug_texts, None, max_len, aug_tags)
         aug_sen, sen_tags = filter_Otexts(aug_sen, sen_tags, list(all_type))
         

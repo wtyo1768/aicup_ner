@@ -6,6 +6,7 @@ python3 flat_main.py \
     --number_normalized 3 \
     --cv true \
     --data_type 'default' \
+    --model_type 'flat' \
     --layer 1 \
     --use_bigram 0 \
     --use_pos_tag 0 \
@@ -19,16 +20,20 @@ python3 flat_main.py \
     --fix_bert_epoch 1 \
     --epoch 10 \
     --batch 16 \
-    --status 'test' \
+    --status 'train' \
     --lexicon_name 'lk' \
     --bigram_min_freq 1 \
-    --embed_lr_rate 1.3 \
+    --embed_lr_rate 0.7 \
     --fold 4 \
     --use_abs_pos false \
     --use_rel_pos true \
     --do_pred 1 \
     --crf_lr 0.1 \
     --post 'n' \
+    --k_proj false \
+    --pos_norm true \
+    --head 8 \
+    --head_dim 25 \
     # --lr 6e-5 \
     # --bert_lr_rate 0.5 \
     # --embed_lr_rate 1
